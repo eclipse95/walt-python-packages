@@ -10,7 +10,7 @@ from walt.common.constants import (
     WALT_SERVER_DAEMON_PORT,
     WALT_SERVER_TCP_PORT,
 )
-from walt.common.tools import do, failsafe_makedirs, failsafe_symlink, get_mac_address
+from walt.common.tools import do, failsafe_symlink, get_mac_address
 from walt.server import spec
 from walt.server.const import (
     WALT_INTF,
@@ -172,8 +172,8 @@ def fix_if_absolute_symlink(image_root, path, img_print):
 
 
 def fix_absolute_symlinks(image_root, dirpath, img_print):
-    for root, dirs, files in os.walk(dirpath):
-        for name in files:
+    for root, dirs, files_in_dir in os.walk(dirpath):
+        for name in files_in_dir:
             path = os.path.join(root, name)
             fix_if_absolute_symlink(image_root, path, img_print)
 

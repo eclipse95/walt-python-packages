@@ -4,7 +4,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-import apt
+import apt  # python3-apt
 import apt.progress.base
 
 """

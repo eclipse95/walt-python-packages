@@ -6,7 +6,6 @@ import tarfile
 from contextlib import nullcontext
 from os import getpid
 from os.path import dirname
-from pathlib import Path
 from time import time
 from walt.server.trackexec.const import (
         OpCodes, MAP_FILE_SIZE, SEC_AS_TS, MAP_BLOCK_UINT16_SIZE
@@ -234,7 +233,6 @@ class TrackExecRecorder(LogAbstractManagement):
         ts_offset = ts - self._last_timestamp
         # encode the timestamp ensuring none of the four uint16 values
         # could match an opcode.
-        saved_ts_offset = ts_offset
         for _ in range(4):
             self._bytecode.add((ts_offset & 0x7fff)+1)
             ts_offset >>= 15

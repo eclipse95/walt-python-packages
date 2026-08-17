@@ -1,6 +1,4 @@
-import json
 import numpy as np
-import re
 import sys
 from collections import defaultdict
 from datetime import datetime
@@ -8,7 +6,7 @@ from numpy.lib.recfunctions import rec_join as np_rec_join
 from time import time
 
 from walt.common.constants import WALT_SERVER_NETCONSOLE_PORT
-from walt.common.tcp import MyPickle as pickle, Requests, read_pickle, write_pickle
+from walt.common.tcp import Requests, read_pickle, write_pickle
 from walt.common.udp import udp_server_socket
 from walt.server.regex import PosixExtendedRegex
 from walt.server.tools import get_server_ip, np_recarray_to_tuple_of_dicts
@@ -306,7 +304,7 @@ class LogsToSocketHandler(object):
                                   stream_ids.astype([("stream_id", "O")]),
                                   self.cache, jointype="leftouter",
                                   defaults={"issuer": None, "stream": None})
-        mask_cache_miss = (stream_info.issuer == None)
+        mask_cache_miss = (stream_info.issuer is None)
         if mask_cache_miss.any():
             # some stream info is missing from cache, query db
             db_stream_ids = stream_info[mask_cache_miss].stream_id

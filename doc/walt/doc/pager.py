@@ -179,7 +179,7 @@ class Pager:
                     readline.redisplay()
                 readline.set_pre_input_hook(hook)
                 hook_enabled = True
-            except:
+            except FileNotFoundError:
                 pass
         completion_enabled = False
         if completer is not None:

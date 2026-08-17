@@ -1,7 +1,6 @@
 import aiohttp
 import asyncio
 import dns.resolver
-import os
 import socket
 import subprocess
 import sys
@@ -20,7 +19,6 @@ from walt.common.term import (
         wait_for_large_enough_terminal,
 )
 from walt.common.tools import chown_tree, do
-from walt.server.tools import wait_message_read
 from walt.server.vpn.const import (
         VPN_SERVER_PATH,
         VPN_ENDPOINT_PATH,
@@ -180,7 +178,7 @@ def prompt_proto_entrypoint(proto):
 def prompt_boot_mode():
     print(EXPLAIN_BOOT_MODE)
     value = choose(
-            f"Please indicate the boot mode of VPN-capable nodes:",
+            "Please indicate the boot mode of VPN-capable nodes:",
             ["permissive", "enforced"],
             allow_ctrl_c=True,
     )
@@ -321,7 +319,7 @@ def has_ip_in_dns(hostname):
 
 def check_valid_fqdn():
     fqdn = socket.getfqdn()
-    if not "." in fqdn:
+    if "." not in fqdn:
         return False, FQDN_ISSUE
     if not has_ip_in_dns(fqdn):
         return False, FQDN_ISSUE

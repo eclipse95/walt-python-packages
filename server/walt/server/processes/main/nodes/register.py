@@ -1,4 +1,3 @@
-import sys
 
 from walt.server.processes.main.workflow import Workflow
 

@@ -1,8 +1,17 @@
 import sys
 from pathlib import Path
-from typing import ClassVar
 
 from plumbum import cli
+try:
+    from pkg_resources import resource_stream # remove in Python 3.12+
+except ImportError:
+    import importlib.resources
+    def resource_stream(package, filename):
+        ref = importlib.resources.files(package).joinpath(filename)
+        with ref.open('rb') as fp:
+            my_bytes = fp.read()
+        return my_bytes
+
 from walt.common import busybox_init, systemd
 from walt.common.systemd import SYSTEMD_DEFAULT_DIR
 

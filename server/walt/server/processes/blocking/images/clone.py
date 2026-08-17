@@ -1,12 +1,10 @@
 from __future__ import annotations
 
 import re
-import subprocess
 import typing
 import uuid
 
 from walt.common.formatting import format_sentence
-from walt.server.exttools import docker
 from walt.server.processes.blocking.images.metadata import pull_user_metadata
 from walt.server.processes.blocking.registries import (
     DockerHubClient,

@@ -103,6 +103,7 @@ class HyperGraph:
     def __init__(self):
         self.states = None
         self.next_transitions = None
+        self.start_state = None
 
     def register_state(self, state_name):
         state = State(self, state_name)

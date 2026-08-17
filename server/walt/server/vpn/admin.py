@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import os
 import socket
-import time
 
 from importlib.resources import files
 from plumbum.cli.terminal import prompt

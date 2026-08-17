@@ -1,11 +1,9 @@
 import numpy as np
 import psycopg2.extras
-import re
-from datetime import datetime, timedelta
+from datetime import datetime
 from psycopg2.extensions import register_adapter, AsIs
 from time import time
 
-from walt.common.tcp import MyPickle as pickle
 from walt.common.tools import get_mac_address
 from walt.server import const
 from walt.server.processes.db.postgres import PostgresDB
@@ -320,12 +318,12 @@ class ServerDB(PostgresDB):
         # note: prefix "(?e)" allows to restrict the regular expression syntax
         # of postgresql to the "ERE" (Extended Posix Regex)
         if streams_regexp is not None:
-            constraints.append(f"s.name ~ %s")
+            constraints.append("s.name ~ %s")
             args.append("(?e)" + streams_regexp)
         if exclude_consoles:
             constraints.append("s.name ~ '$(?<!console)'")
         if logline_regexp is not None:
-            constraints.append(f"l.line ~ %s")
+            constraints.append("l.line ~ %s")
             args.append("(?e)" + logline_regexp)
         start, end = history
         if start:
@@ -424,7 +422,7 @@ class ServerDB(PostgresDB):
         return self.execute(sql)
 
     def get_all_images(self):
-        sql = f"""  SELECT i.fullname, count(n.mac)>0 as in_use
+        sql = """  SELECT i.fullname, count(n.mac)>0 as in_use
                     FROM images i
                     LEFT JOIN nodes n ON i.fullname = n.image
                     GROUP BY i.fullname;"""

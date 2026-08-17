@@ -23,7 +23,7 @@ class PoEManager:
 
     def filter_poe_rebootable(self, nodes):
         nodes = self.server.devices.ensure_connectivity_info(nodes)
-        mask_poe_error = nodes.poe_error != None
+        mask_poe_error = nodes.poe_error is not None
         if mask_poe_error.any():
             nodes_ok = nodes[~mask_poe_error]
             nodes_ko = nodes[mask_poe_error]
@@ -60,7 +60,7 @@ class PoEManager:
         # should be poe-rebootable
         assert isinstance(nodes, np.recarray)
         assert "poe_error" in nodes.dtype.names
-        assert (nodes.poe_error == None).all()
+        assert (nodes.poe_error is None).all()
         wf.update_env(sw_ports_info=nodes)
         wf.insert_steps([self._wf_multiple_sw_ports_set_poe,
                          self._wf_end_of_nodes_set_poe])

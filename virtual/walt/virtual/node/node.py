@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import atexit
+import base64
 import json
 import os
 import platform
@@ -12,13 +13,13 @@ import subprocess
 import sys
 import tempfile
 import time
-import base64
 from contextlib import contextmanager
+from importlib.resources import files
 from os import getenv, getpid, truncate
 from pathlib import Path
 
-from importlib.resources import files
 from plumbum import cli
+
 from walt.common.apilink import ServerAPILink
 from walt.common.fakeipxe import ipxe_boot
 from walt.common.logs import LoggedApplication

@@ -463,7 +463,7 @@ class NonBlockingSocket:
 
 
 def convert_query_param_value(value, value_type):
-    if value_type != str:
+    if value_type is not str:
         try:
             value = json.loads(value)
             value = value_type(value)

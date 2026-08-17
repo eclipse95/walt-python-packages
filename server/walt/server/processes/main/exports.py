@@ -6,7 +6,7 @@ from walt.server.processes.main.network.nfs import NFSExporter
 from walt.server.processes.main.workflow import Workflow
 from walt.server.tools import get_walt_subnet
 
-SQL_NODES_PERSIST_PATHS = f"""
+SQL_NODES_PERSIST_PATHS = """
 SELECT (
     '/var/lib/walt/nodes/' || n.mac || '/persist_dirs/' || split_part(n.image, '/', 1)
 ) as persist_path

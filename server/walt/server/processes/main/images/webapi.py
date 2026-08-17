@@ -1,5 +1,3 @@
-import json
-import numpy as np
 import re
 
 from walt.server.processes.main.images.tabular import get_all_tabular_data

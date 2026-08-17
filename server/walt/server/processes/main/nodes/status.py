@@ -132,7 +132,6 @@ class NodeBootupStatusManager(object):
         #   is returned
         # * it may be disabled, in which case the value stored is 'null'::jsonb and
         #   the value to return is None.
-        now = time()
         boot_info = self._db.execute(f"""
             SELECT
                 mac,
@@ -198,7 +197,7 @@ class NodeBootupStatusManager(object):
         # the node should not be booted yet
         mask = ~np.isin(self._boot_info_table.mac, list(self._booted_macs))
         # node's timeout should not have been set to none in config
-        mask &= (self._boot_info_table.timeout != None)
+        mask &= (self._boot_info_table.timeout is not None)
         # node's remaining_retries should not be 0
         mask &= (self._boot_info_table.remaining_retries != 0)
         # node should not be in powersave mode

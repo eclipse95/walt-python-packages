@@ -6,7 +6,6 @@ from walt.server.processes.blocking.images.metadata import (
     update_user_metadata_for_image,
 )
 from walt.server.processes.blocking.registries import (
-    DockerHubClient,
     get_registry_client,
     MissingRegistryCredentials,
 )

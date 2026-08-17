@@ -165,7 +165,7 @@ class SkopeoRegistryClient(RegistryClientBase):
                 continue  # retry
             try:
                 config = json.loads(data)
-            except:
+            except (TypeError, json.JSONDecodeError):
                 config = {}
             if "Created" not in config:
                 raise Exception(f"{fullname}: unknown image format.")

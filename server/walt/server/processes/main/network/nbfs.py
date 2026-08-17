@@ -1,4 +1,5 @@
 import socket
+import sys
 from pathlib import Path
 
 from walt.common.unix import bind_to_random_sockname

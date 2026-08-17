@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import functools
 import sys
-from socket import IPPROTO_TCP, TCP_NODELAY, create_connection
+from socket import create_connection
 from time import time
 
 from walt.common.api import api, api_expose_method

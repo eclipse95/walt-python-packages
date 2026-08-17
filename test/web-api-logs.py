@@ -21,7 +21,8 @@ def test_api_logs():
     # log line
     t0 = time()
     vnode = test_create_vnode()
-    vnode.wait(); sleep(0.5)    # the server buffers logs a little
+    vnode.wait()
+    sleep(0.5)    # the server buffers logs a little
     t1 = time()
     dict_params = { "from": t0, "to": t1 }
     json_logs = test_json_request("logs", dict_params=dict_params)

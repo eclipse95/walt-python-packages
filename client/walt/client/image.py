@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import re
 
 from plumbum import cli
 from walt.client.application import WalTApplication, WalTCategoryApplication

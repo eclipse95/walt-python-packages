@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import shutil
-import signal
 import sys
 from multiprocessing import current_process
 from subprocess import PIPE, STDOUT, Popen, run

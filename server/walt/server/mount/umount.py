@@ -20,7 +20,7 @@ def image_umount(image_id, mount_path):
             except Exception:
                 new_lsof = lsof("-Q", "-Fp", mount_path)
                 if new_lsof != old_lsof and new_lsof != "":
-                    desc_pids = " ".join(l[1:] for l in new_lsof.splitlines())
+                    desc_pids = " ".join(line[1:] for line in new_lsof.splitlines())
                     msg = f"held by process(es) with pid(s) {desc_pids}, will retry."
                     img_print_generic(image_id, msg)
                     old_lsof = new_lsof

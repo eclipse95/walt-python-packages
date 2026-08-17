@@ -16,7 +16,7 @@ async def async_check_image_update(
 
 
 async def async_update_default_images(requester, server, update_info):
-    requester.stdout.write(f'Checking remote registries...\n')
+    requester.stdout.write('Checking remote registries...\n')
     def validate(image_name, user, location):
         return f"{user}/{image_name}" in update_info
     search = Search(None, requester, validate, output_registries=True)

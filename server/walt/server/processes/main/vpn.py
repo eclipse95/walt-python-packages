@@ -2,7 +2,6 @@ import os
 import pickle
 import shlex
 import signal
-import sys
 import tempfile
 
 from pathlib import Path

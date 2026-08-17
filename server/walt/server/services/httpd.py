@@ -246,7 +246,7 @@ def _generate_boot_sig(key):
     boot_img = FileObject(fd, mode="rb", closefd=False)
     boot_img_content = boot_img.read()
     boot_img.close()
-    cmd = f"openssl dgst -sha256 -hex"
+    cmd = "openssl dgst -sha256 -hex"
     res = subprocess.run(shlex.split(cmd),
                          input=boot_img_content,
                          capture_output=True)

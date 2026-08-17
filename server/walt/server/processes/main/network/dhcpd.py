@@ -1,9 +1,6 @@
 import os
-from collections import defaultdict
 from ipaddress import ip_address
-from itertools import groupby
 import numpy as np
-from operator import itemgetter
 from pathlib import Path
 
 from walt.common.netsetup import NetSetup

@@ -1,4 +1,5 @@
 from importlib.resources import files
+
 from walt.common.setup import WaltGenericSetup
 
 BUSYBOX_SERVICE_FILES = ["S52waltvirtualnode"]

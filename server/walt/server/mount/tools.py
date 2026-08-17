@@ -1,4 +1,3 @@
-import logging
 import fcntl
 from contextlib import contextmanager
 from pathlib import Path

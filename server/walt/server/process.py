@@ -10,7 +10,6 @@ from collections import defaultdict
 from datetime import datetime
 from functools import cached_property
 from multiprocessing import Pipe, Process, current_process
-from os import getpid
 from pathlib import Path
 from select import select
 

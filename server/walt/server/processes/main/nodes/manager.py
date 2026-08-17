@@ -18,12 +18,8 @@ from walt.server.processes.main.nodes.register import handle_registration_reques
 from walt.server.processes.main.nodes.show import show
 from walt.server.processes.main.nodes.webapi import web_api_list_nodes
 from walt.server.processes.main.nodes.status import (
-        NodeBootupStatusManager,
-        NODE_DEFAULT_BOOT_RETRIES,
-        NODE_DEFAULT_BOOT_TIMEOUT,
-        NODE_MIN_BOOT_TIMEOUT
+        NodeBootupStatusManager
 )
-from walt.server.processes.main.nodes.status import NodeBootupStatusManager
 from walt.server.processes.main.nodes.wait import WaitInfo
 from walt.server.processes.main.workflow import Workflow
 from walt.server.tools import get_server_ip, get_walt_subnet, ip

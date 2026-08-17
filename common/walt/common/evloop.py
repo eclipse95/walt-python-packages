@@ -4,7 +4,7 @@ import os
 import signal
 from heapq import heappop, heappush
 from multiprocessing import current_process  # noqa: F401
-from select import POLLIN, POLLOUT, POLLPRI, poll, select
+from select import POLLIN, POLLOUT, POLLPRI, poll
 from subprocess import PIPE, Popen, DEVNULL
 from time import time
 from collections import defaultdict

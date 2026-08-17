@@ -81,7 +81,7 @@ class MarkdownRenderer:
             # add 1-char left and right margins
             # and use \033[K to make background color span to right edge
             buf_lines = self.buf.rstrip("\n").split("\n")
-            self.max_width = max(self.real_text_len(l) for l in buf_lines)
+            self.max_width = max(self.real_text_len(line) for line in buf_lines)
             self.max_width += 2  # left and right margins
             buf = f"{md_bg} \033[K\n ".join(buf_lines)
             self.buf = buf + f"{md_bg}\033[K\n\033[K\n"

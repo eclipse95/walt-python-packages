@@ -5,7 +5,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta, date, time as midnight
 from pathlib import Path
 from plumbum import cli
-from walt.doc.pager import Pager, SCROLL_HELP
+from walt.doc.pager import Pager
 from walt.server.trackexec.const import (
         SEC_AS_TS, MIN_AS_TS, HOUR_AS_TS, DAY_AS_TS
 )
@@ -473,7 +473,7 @@ class TrackExecPlayer(Pager):
                             f"Error: {num_matches} different file paths could match.")
                     elif num_matches == 0:
                         self.error_message = (
-                            f"Error: could not find a matching file path "
+                            "Error: could not find a matching file path "
                             "in the exec trace.")
                     else:
                         # ok

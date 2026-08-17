@@ -13,12 +13,12 @@ from walt.server.processes.main.nodes.manager import (
     VNODE_DEFAULT_DISKS,
     VNODE_DEFAULT_NETWORKS,
     VNODE_DEFAULT_RAM,
-    VNODE_DEFAULT_BOOT_DELAY,
+    VNODE_DEFAULT_BOOT_DELAY)
+from walt.server.processes.main.nodes.status import (
     NODE_DEFAULT_BOOT_RETRIES,
     NODE_DEFAULT_BOOT_TIMEOUT,
-    NODE_MIN_BOOT_TIMEOUT,
-)
-from walt.server.tools import ip_in_walt_network, np_record_to_dict, get_server_ip
+    NODE_MIN_BOOT_TIMEOUT)
+from walt.server.tools import np_record_to_dict, get_server_ip
 
 PPRINT_NONE = "<unspecified>"
 
@@ -692,7 +692,6 @@ class SettingsManager:
             requester.stdout.write("Done.\n")
 
     def get_device_config_data(self, requester, device_set):
-        result = {}
         # ensure the device set is correct
         device_infos = self.server.devices.parse_device_set(requester, device_set)
         if device_infos is None:
@@ -874,8 +873,8 @@ class PortSettingsManager:
         if port_id is None:
             port_ids = sorted(ports_info.keys())
             if len(port_ids) == 0:
-                requester.stdout.write(f"WalT did not detect traffic going through this switch yet.\n")
-                requester.stdout.write(f"Use 'walt device rescan' to probe again.\n")
+                requester.stdout.write("WalT did not detect traffic going through this switch yet.\n")
+                requester.stdout.write("Use 'walt device rescan' to probe again.\n")
                 return
             requester.stdout.write(f"WalT currently uses the following ports of {switch_name}:\n")
             footer_notes.append("The other switch ports are in their default configuration.")

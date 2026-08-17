@@ -8,9 +8,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-import requests
 from walt.common.version import __version__
-from walt.server.setup.apt import (
+from walt.server.setup.apt_wrapper import (
     autoremove_packages,
     fix_dpkg_options,
     get_debconf_selection,

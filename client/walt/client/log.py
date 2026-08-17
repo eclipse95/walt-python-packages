@@ -13,7 +13,7 @@ from walt.client.timeout import (
 )
 from walt.client.tools import confirm
 from walt.client.types import LOG_CHECKPOINT
-from walt.common.tcp import Requests, read_pickle, write_pickle, MyPickle as pickle
+from walt.common.tcp import Requests, read_pickle, write_pickle
 
 DATE_FORMAT_STRING = "%Y-%m-%d %H:%M:%S"
 DATE_FORMAT_STRING_HUMAN = "<YYYY>-<MM>-<DD> <hh>:<mm>:<ss>"

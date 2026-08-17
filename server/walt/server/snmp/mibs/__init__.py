@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import os.path
 
 import snimpy.manager
 import snimpy.mib

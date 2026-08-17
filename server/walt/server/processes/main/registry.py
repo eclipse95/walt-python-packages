@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 
-from podman import PodmanClient
 from podman.errors.exceptions import ImageNotFound
 from walt.server.exttools import podman
 from walt.server.tools import add_image_repo, format_node_models_list

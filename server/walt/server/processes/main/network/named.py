@@ -1,10 +1,11 @@
 import numpy as np
-import time, re
+import time
+import re
 from pathlib import Path
 
 from walt.server.processes.main.network.service import ServiceRestarter
 from walt.server.processes.main.network.service import async_systemd_service_restart_cmd
-from walt.server.tools import get_dns_servers, get_server_ip, get_walt_subnet, ip
+from walt.server.tools import get_dns_servers, get_server_ip, get_walt_subnet
 
 NAMED_STATE_DIR = Path("/var/lib/walt/services/named")
 NAMED_CONF = NAMED_STATE_DIR / "named.conf"

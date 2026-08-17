@@ -1,5 +1,5 @@
+import sys
 from walt.common.version import __version__
-
 
 class WalTUpdatedException(Exception):
     pass
@@ -21,7 +21,6 @@ def check_update(server):
         import importlib
         import os
         import subprocess
-        import sys
         import tempfile
         from pathlib import Path
         pip_install = f"{sys.prefix}/bin/pip install"

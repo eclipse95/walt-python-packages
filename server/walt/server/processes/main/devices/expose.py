@@ -1,5 +1,4 @@
 import re
-import socket
 from walt.common.tcp import server_socket
 from walt.server.tools import NonBlockingSocket
 
