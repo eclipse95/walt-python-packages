@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
+from importlib.resources import files
+
 import snimpy.manager
 import snimpy.mib
-from importlib.resources import files
 
 PATH_SET = False
 
@@ -12,6 +13,7 @@ def load_mib(mib):
     if not PATH_SET:
         # add this directory to MIB path
         import walt.server.snmp.mibs
+
         this_dir = str(files(walt.server.snmp.mibs))
         mib_path = snimpy.mib.path() + ":" + this_dir
         snimpy.mib.path(mib_path)

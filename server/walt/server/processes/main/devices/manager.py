@@ -1,5 +1,6 @@
-import numpy as np
 import re
+
+import numpy as np
 
 from walt.common.formatting import format_paragraph
 from walt.common.netsetup import NetSetup
@@ -9,7 +10,7 @@ from walt.server.tools import (
     get_server_ip,
     get_walt_subnet,
     ip_in_walt_network,
-    np_columnate
+    np_columnate,
 )
 
 NEW_NAME_ERROR_AND_GUIDELINES = """\
@@ -95,7 +96,7 @@ If one of them is actually a switch,\
  use 'walt device config <name> type=switch' to fix this."""
 
 
-class DevicesManager(object):
+class DevicesManager:
     def __init__(self, server):
         self.server = server
         self.db = server.db
@@ -159,19 +160,18 @@ class DevicesManager(object):
             if requester is not None:
                 requester.stderr.write(err_message)
             return None
-        else:
-            # depending on the type, return only the relevant fields
-            device_info = devices_info[0]
-            min_fields = ["mac", "ip", "name", "type", "conf", "in_walt_net"]
-            if device_info.type == "node":
-                return device_info  # all fields are relevant
-            elif device_info.type == "switch":
-                return device_info[min_fields + ["model"]]
-            else:
-                return device_info[min_fields]
+        # depending on the type, return only the relevant fields
+        device_info = devices_info[0]
+        min_fields = ["mac", "ip", "name", "type", "conf", "in_walt_net"]
+        if device_info.type == "node":
+            return device_info  # all fields are relevant
+        if device_info.type == "switch":
+            return device_info[min_fields + ["model"]]
+        return device_info[min_fields]
 
-    def get_multiple_device_info(self, where_sql, where_values,
-                                 sortby=None, include_connectivity=False):
+    def get_multiple_device_info(
+        self, where_sql, where_values, sortby=None, include_connectivity=False
+    ):
         # gateway, netmask and booted flag will be filled below,
         # for now this sql query just reserve a column for these attributes.
         sql = f"""
@@ -235,7 +235,7 @@ class DevicesManager(object):
             left join devices sw_d on sw_d.mac = t.sw_mac"""
         devices_info = self.db.execute(sql, where_values)
         if devices_info.size > 0:
-            nodes_mask = (devices_info.type == 'node')
+            nodes_mask = devices_info.type == "node"
             if nodes_mask.size > 0:
                 # netsetup=NAT can actually be applied to all devices, not only
                 # nodes. However, considering only nodes ensures these devices
@@ -244,8 +244,10 @@ class DevicesManager(object):
                 devices_info.netmask[nodes_mask] = self.netmask
                 nat_mask = nodes_mask & (devices_info.netsetup == NetSetup.NAT)
                 devices_info.gateway[nat_mask] = self.server_ip
-                booted_mask = np.isin(devices_info[nodes_mask].mac,
-                        list(self.server.nodes.get_booted_macs()))
+                booted_mask = np.isin(
+                    devices_info[nodes_mask].mac,
+                    list(self.server.nodes.get_booted_macs()),
+                )
                 devices_info.booted[nodes_mask] = booted_mask
             if sortby is not None:
                 # workaround a strange exception sometimes thrown by
@@ -281,26 +283,24 @@ class DevicesManager(object):
     def generate_device_name(self, type, mac, **kwargs):
         if type == "server":
             return "walt-server"
-        else:
-            prefix = "%s-%s" % (type, "".join(mac.split(":")[3:]))
-            i = 1
-            while True:
-                if i == 1:
-                    name = prefix
-                else:
-                    name = "%s-%d" % (prefix, i)
-                device_info = self.db.select_unique("devices", name=name)
-                if device_info is None:
-                    # ok name does not exist in db yet
-                    return name
-                else:
-                    # device name already exists! Check next one.
-                    i += 1
+        prefix = "%s-%s" % (type, "".join(mac.split(":")[3:]))
+        i = 1
+        while True:
+            if i == 1:
+                name = prefix
+            else:
+                name = "%s-%d" % (prefix, i)
+            device_info = self.db.select_unique("devices", name=name)
+            if device_info is None:
+                # ok name does not exist in db yet
+                return name
+            # device name already exists! Check next one.
+            i += 1
 
     def add_or_update(self, requester=None, **args_data):
         """Add or update a device in db given **args_data arguments
 
-           Returns a boolean indicating if something really changed.
+        Returns a boolean indicating if something really changed.
         """
         if "type" not in args_data:
             args_data["type"] = "unknown"
@@ -334,12 +334,12 @@ class DevicesManager(object):
                     % (name, args_data["type"])
                 )
                 updates["type"] = args_data["type"]
-            if db_data.ip is None and args_data.get("ip", None) is not None:
+            if db_data.ip is None and args_data.get("ip") is not None:
                 print("Device: %s updating ip, unknown -> %s" % (name, args_data["ip"]))
                 updates["ip"] = args_data["ip"]
             elif (
                 db_data.ip is not None
-                and args_data.get("ip", None) is not None
+                and args_data.get("ip") is not None
                 and not ip_in_walt_network(db_data.ip)
                 and ip_in_walt_network(args_data["ip"])
             ):
@@ -442,13 +442,14 @@ class DevicesManager(object):
 
     def ensure_connectivity_info(self, devices):
         if isinstance(devices, np.recarray):
-            if 'sw_mac' in devices.dtype.names:
+            if "sw_mac" in devices.dtype.names:
                 return devices  # connectivity info is already there
             device_macs = devices.mac
         else:
             device_macs = tuple(d.mac for d in devices)
         return self.get_multiple_device_info_for_macs(
-                    device_macs, include_connectivity=True)
+            device_macs, include_connectivity=True
+        )
 
     def get_device_set_macs(self, requester, device_set):
         device_macs = []
@@ -506,23 +507,23 @@ class DevicesManager(object):
         # (see the configuration of devices having netsetup=NAT below)
         self._fw_rules.append(
             "iptables --append FORWARD "
-           f"--source {WALT_SUBNET} "
-         f"! --destination {WALT_SUBNET} "
+            f"--source {WALT_SUBNET} "
+            f"! --destination {WALT_SUBNET} "
             "--jump WALT"
         )
         # allow incoming traffic to the walt network if the corresponding
         # outgoing traffic was previously allowed.
         self._fw_rules.append(
             "iptables --append FORWARD "
-           f"--destination {WALT_SUBNET} "
+            f"--destination {WALT_SUBNET} "
             "--match state --state RELATED,ESTABLISHED "
             "--jump ACCEPT"
         )
         # NAT nodes traffic that is allowed to go outside
         self._fw_rules.append(
             "iptables -m addrtype --table nat --append POSTROUTING "
-             f"--source {WALT_SUBNET} "
-           f"! --destination {WALT_SUBNET} "
+            f"--source {WALT_SUBNET} "
+            f"! --destination {WALT_SUBNET} "
             "! --dst-type LOCAL "
             "--jump MASQUERADE"
         )
@@ -541,9 +542,11 @@ class DevicesManager(object):
             do(f"iptables --insert WALT --source '{device_info.ip}' --jump ACCEPT")
 
     def _invert_fw_rule(self, rule):
-        return rule.replace("--insert", "--delete"
-                  ).replace("--append", "--delete"
-                  ).replace("--new-chain", "--delete-chain")
+        return (
+            rule.replace("--insert", "--delete")
+            .replace("--append", "--delete")
+            .replace("--new-chain", "--delete-chain")
+        )
 
     def cleanup_netsetup(self):
         for rule in reversed(self._fw_rules):

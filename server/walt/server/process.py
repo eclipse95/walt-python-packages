@@ -4,8 +4,6 @@ import pdb
 import signal
 import sys
 import traceback
-import setproctitle
-
 from collections import defaultdict
 from datetime import datetime
 from functools import cached_property
@@ -13,10 +11,16 @@ from multiprocessing import Pipe, Process, current_process
 from pathlib import Path
 from select import select
 
+import setproctitle
+
 from walt.common.apilink import AttrCallAggregator, AttrCallRunner
 from walt.common.evloop import BreakLoopRequested, EventLoop
-from walt.common.tools import AutoCleaner, SimpleContainer, on_sigterm_throw_exception
-from walt.common.tools import interrupt_print
+from walt.common.tools import (
+    AutoCleaner,
+    SimpleContainer,
+    interrupt_print,
+    on_sigterm_throw_exception,
+)
 from walt.server.tools import set_rlimits
 
 TRACKEXEC_LOG_DIR = Path("/var/log/walt/trackexec")
@@ -63,6 +67,7 @@ def fix_pdb():
             sys_stdin_readline_saved = sys.stdin.readline
             try:
                 from multiprocessing import current_process
+
                 self.prompt = f"(Pdb {current_process().name}) "
                 sys.stdin.readline = current_process().readline
                 pdb.SavedPdb.interaction(self, *args, **kwargs)
@@ -76,6 +81,7 @@ def _instanciate_ev_loop():
     ev_loop = EventLoop()
     if TRACKEXEC_LOG_DIR.exists():
         from walt.server.trackexec import precise_timestamping
+
         ev_loop.idle_section_hook = precise_timestamping
     return ev_loop
 
@@ -87,10 +93,9 @@ def _update_trackexec_symlink_latest(target_dir):
             # symlink has been created by another concurrent process
             # nothing to do
             return
-        else:
-            # symlink must be updated, remove it first
-            # (set missing_ok=True to deal with concurrent processes)
-            symlink_latest.unlink(missing_ok=True)
+        # symlink must be updated, remove it first
+        # (set missing_ok=True to deal with concurrent processes)
+        symlink_latest.unlink(missing_ok=True)
     except Exception:
         pass  # symlink did not exist, continue below
     try:
@@ -103,6 +108,7 @@ def _init_trackexec(name, start_time):
     if TRACKEXEC_LOG_DIR.exists():
         import walt
         from walt.server.trackexec import record
+
         start_time_dir = start_time.strftime("%y%m%d-%H%M%S")
         _update_trackexec_symlink_latest(start_time_dir)
         log_dir_path = TRACKEXEC_LOG_DIR / start_time_dir / name
@@ -207,6 +213,7 @@ class EvProcess(Process):
             # stop trackexec
             if TRACKEXEC_LOG_DIR.exists():
                 from walt.server.trackexec import stop
+
                 stop()
 
     def readline(self):
@@ -214,7 +221,7 @@ class EvProcess(Process):
         return self.pipe_process.recv()
 
 
-class EvProcessesManager(object):
+class EvProcessesManager:
     def __init__(self):
         self.process_levels = defaultdict(list)
         self.initial_failing_process = None
@@ -290,7 +297,7 @@ class EvProcessesManager(object):
                         t.pipe_manager.send("PROPAGATED_EXIT")
                     except Exception:
                         _log_dbg_exit(f"{t.name} is not responding")
-                #_log_dbg_exit(f"waiting for {t.name} process to end")
+                # _log_dbg_exit(f"waiting for {t.name} process to end")
                 has_msg = t.pipe_manager.poll(20)
                 if not has_msg:
                     _log_dbg_exit(f"sending SIGTERM to {t.name}")
@@ -300,7 +307,7 @@ class EvProcessesManager(object):
                 try:
                     if has_msg:
                         t.pipe_manager.recv()  # msg is probably "END_EXIT"
-                        #_log_dbg_exit(f"{t.name} process did end")
+                        # _log_dbg_exit(f"{t.name} process did end")
                         clean_exit = True
                 finally:
                     if not clean_exit:
@@ -349,8 +356,7 @@ class RPCService:
         handler = self.service_handlers.get(service_name)
         if handler is None:
             raise AttributeError
-        else:
-            return handler
+        return handler
 
     def __delattr__(self, service_name):
         del self.service_handlers[service_name]
@@ -370,7 +376,7 @@ class RPCSession:
         return AttrCallAggregator(self._connector.async_runner, p_args=self._args)
 
 
-class RPCTask(object):
+class RPCTask:
     def __init__(self, connector, remote_req_id, task_label):
         self.connector = connector
         self.remote_req_id = remote_req_id
@@ -416,20 +422,22 @@ class RPCTask(object):
     def __del__(self):
         if self.is_async():
             if not self._completed:
-                print(f"{self}: garbage collected, but return_result() never called.",
-                      file=sys.stderr)
+                print(
+                    f"{self}: garbage collected, but return_result() never called.",
+                    file=sys.stderr,
+                )
 
 
-class RPCContext(object):
+class RPCContext:
     def __init__(self, connector, remote_req_id, local_service, task_label):
         self._local_service = local_service
         self.task = RPCTask(connector, remote_req_id, task_label)
 
     @cached_property
     def remote_service(self):
-        return RPCSession(self.task.connector,
-                          self.task.remote_req_id,
-                          self._local_service)
+        return RPCSession(
+            self.task.connector, self.task.remote_req_id, self._local_service
+        )
 
 
 class RPCProcessConnector(ProcessConnector):
@@ -449,8 +457,9 @@ class RPCProcessConnector(ProcessConnector):
         self._next_reqs = None
 
     def __getstate__(self):
-        assert self.default_service is None, \
-                "cannot pickle RPCProcessConnector after it is configured"
+        assert (
+            self.default_service is None
+        ), "cannot pickle RPCProcessConnector after it is configured"
         return self.__dict__
 
     def __setstate__(self, state):
@@ -466,8 +475,7 @@ class RPCProcessConnector(ProcessConnector):
     def __repr__(self):
         if self.label is not None:
             return f"<connector: {self.label}>"
-        else:
-            return "<connector>"
+        return "<connector>"
 
     def create_session(self, local_service=None):
         return RPCSession(self, -1, local_service)
@@ -481,7 +489,7 @@ class RPCProcessConnector(ProcessConnector):
             while self.poll():
                 events.append(self.read())
         except INVALID_PIPE_ERRORS:
-            print(f"{repr(self)}: closed on remote end, self-removing from loop.")
+            print(f"{self!r}: closed on remote end, self-removing from loop.")
             return False
         events.sort(key=lambda x: PRIORITIES[x[0]])
         # print('__DEBUG__', repr(self), 'new events', events)
@@ -489,7 +497,7 @@ class RPCProcessConnector(ProcessConnector):
             if event[0] == "API_CALL":
                 self.handle_api_call(*event[1:])
                 continue
-            elif event[0] == "RESULT":
+            if event[0] == "RESULT":
                 # if we serialize, now that we have a new result check if
                 # another request was waiting to be sent
                 if self._serialize_reqs:
@@ -497,30 +505,29 @@ class RPCProcessConnector(ProcessConnector):
                         req, self._next_reqs = self._next_reqs[0], self._next_reqs[1:]
                         self._write_task(req)  # write next pending req
                     else:
-                        self._next_reqs = None   # no more pending reqs
+                        self._next_reqs = None  # no more pending reqs
                 # process this new result
                 local_req_id, result = event[1], event[2]
                 sync_call = self.submitted_tasks[local_req_id].sync_call
                 if sync_call:  # result (or exception) of sync call
                     self.results[local_req_id] = result
-                else:
-                    if isinstance(result, Exception):  # exception in async call
-                        cb = self.submitted_tasks[local_req_id].exception_cb
-                        if cb is not None:
-                            cb(result)
-                        else:
-                            # it does not make sense to throw the exception in this
-                            # current context since the call was asynchronous: we would
-                            # probably interrupt an unrelated procedure.
-                            print(
-                                f"{current_process().name}: WARNING: A remote "
-                                + "exception in an async call was ignored since no "
-                                + "exception callback was defined."
-                            )
-                    else:  # result of async call
-                        cb = self.submitted_tasks[local_req_id].result_cb
-                        if cb is not None:
-                            cb(result)
+                elif isinstance(result, Exception):  # exception in async call
+                    cb = self.submitted_tasks[local_req_id].exception_cb
+                    if cb is not None:
+                        cb(result)
+                    else:
+                        # it does not make sense to throw the exception in this
+                        # current context since the call was asynchronous: we would
+                        # probably interrupt an unrelated procedure.
+                        print(
+                            f"{current_process().name}: WARNING: A remote "
+                            "exception in an async call was ignored since no "
+                            "exception callback was defined."
+                        )
+                else:  # result of async call
+                    cb = self.submitted_tasks[local_req_id].result_cb
+                    if cb is not None:
+                        cb(result)
                 del self.submitted_tasks[local_req_id]
                 continue
             raise Exception("Broken communication with remote end.")
@@ -530,9 +537,9 @@ class RPCProcessConnector(ProcessConnector):
             local_service = self.default_service
         else:
             local_service = self.submitted_tasks[local_req_id].local_service
-        s_args = tuple(f"{repr(v)}" for v in args)
-        s_kwargs = tuple(f"{k}={repr(v)}" for k, v in kwargs.items())
-        proto_args = ", ". join(s_args + s_kwargs)
+        s_args = tuple(f"{v!r}" for v in args)
+        s_kwargs = tuple(f"{k}={v!r}" for k, v in kwargs.items())
+        proto_args = ", ".join(s_args + s_kwargs)
         task_label = f"{path}({proto_args})"
         context = RPCContext(self, remote_req_id, local_service, task_label)
         if self.local_context:
@@ -545,15 +552,15 @@ class RPCProcessConnector(ProcessConnector):
             try:
                 context.task.return_exception(e)
             except INVALID_PIPE_ERRORS:
-                print(f"{repr(self)}: closed on remote end, "
-                      "could not return exception.")
+                print(f"{self!r}: closed on remote end, " "could not return exception.")
             return
         if not context.task.is_async():
             try:
                 context.task.return_result(res)
             except INVALID_PIPE_ERRORS:
-                print(f"{repr(self)}: closed on remote end, "
-                      "could not return task result.")
+                print(
+                    f"{self!r}: closed on remote end, " "could not return task result."
+                )
 
     def then(self, cb):  # specify callback
         self.submitted_tasks[self.last_req_id].result_cb = cb
@@ -579,14 +586,13 @@ class RPCProcessConnector(ProcessConnector):
         # by blocking on this call only.
         opts = {}
         if local_service is None:
-            opts.update(single_listener = self)
+            opts.update(single_listener=self)
         self.ev_loop.loop(loop_condition, **opts)
         result = self.results.pop(local_req_id)
         if isinstance(result, Exception):
             print(current_process().name + ": Remote exception returned here.")
             raise result
-        else:
-            return result
+        return result
 
     def send_task(self, remote_req_id, local_service, path, args, kwargs, sync_call):
         if self.ids_generator is None:
@@ -608,11 +614,11 @@ class RPCProcessConnector(ProcessConnector):
         #      'API_CALL', remote_req_id, local_req_id, path, args, kwargs)
         req = ("API_CALL", remote_req_id, local_req_id, path, args, kwargs)
         if self._serialize_reqs:
-            if self._next_reqs is None:     # no current req
-                self._next_reqs = []        # start enqueuing next reqs
-                self._write_task(req)       # and send this one
+            if self._next_reqs is None:  # no current req
+                self._next_reqs = []  # start enqueuing next reqs
+                self._write_task(req)  # and send this one
             else:
-                self._next_reqs.append(req) # enqueue this req
+                self._next_reqs.append(req)  # enqueue this req
         else:
             self._write_task(req)
         return local_req_id
@@ -621,12 +627,11 @@ class RPCProcessConnector(ProcessConnector):
         try:
             self.write(req)
         except INVALID_PIPE_ERRORS:
-            print(f"{repr(self)}: closed on remote end, could not send task.")
+            print(f"{self!r}: closed on remote end, could not send task.")
 
 
 class SyncRPCProcessConnector(RPCProcessConnector):
     def __getattr__(self, attr):
         if self.default_session is not None:
             return getattr(self.default_session.do_sync, attr)
-        else:
-            raise AttributeError
+        raise AttributeError

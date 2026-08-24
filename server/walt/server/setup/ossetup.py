@@ -23,7 +23,8 @@ from walt.server.setup.grub import get_grub_boot_disk
 DOCKER_REPO_URL = "https://download.docker.com/linux/debian"
 DOCKER_KEYRING_FILE = Path("/usr/share/keyrings/docker-archive-keyring.gpg")
 
-APT_SOURCES_LIST_CONTENT = """\
+APT_SOURCES_LIST_CONTENT = (
+    """\
 deb http://deb.D.org/D/ R C
 deb-src http://deb.D.org/D/ R C
 
@@ -34,12 +35,10 @@ deb-src http://deb.D.org/D-security R-security C
 # see https://www.D.org/doc/manuals/D-reference/ch02.en.html#_updates_and_backports
 deb http://deb.D.org/D/ R-updates C
 deb-src http://deb.D.org/D/ R-updates C
-""".replace(
-    "D", "debian"
-).replace(
-    "R", "bookworm"
-).replace(
-    "C", "main contrib non-free non-free-firmware")
+""".replace("D", "debian")
+    .replace("R", "bookworm")
+    .replace("C", "main contrib non-free non-free-firmware")
+)
 
 APT_DEBIAN_SOURCES_CONTENT = """\
 Types: deb deb-src
@@ -53,10 +52,9 @@ URIs: http://deb.debian.org/debian-security
 Suites: RELEASE-security
 Components: COMPONENTS
 Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
-""".replace(
-    "RELEASE", "bookworm"
-).replace(
-    "COMPONENTS", "main contrib non-free non-free-firmware")
+""".replace("RELEASE", "bookworm").replace(
+    "COMPONENTS", "main contrib non-free non-free-firmware"
+)
 
 # in case of distribution upgrade, remove old versions of packages (including their
 # configuration files)
@@ -69,23 +67,83 @@ Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 #   /var/lib/walt/services, and does not need anymore to touch the default
 #   configuration files of these services)
 # up-to-date versions of these packages will be reinstalled in a next step.
-APT_OLD_DIST_PACKAGES = """
-docker docker-engine docker-ce docker-ce-cli containerd containerd.io docker.io
-runc containers-image containers-common buildah podman containernetworking-plugins
-conmon podman-plugins slirp4netns crun isc-dhcp-server tftpd-hpa ptpd lldpd snmpd
-""".split()
+APT_OLD_DIST_PACKAGES = [
+    "docker",
+    "docker-engine",
+    "docker-ce",
+    "docker-ce-cli",
+    "containerd",
+    "containerd.io",
+    "docker.io",
+    "runc",
+    "containers-image",
+    "containers-common",
+    "buildah",
+    "podman",
+    "containernetworking-plugins",
+    "conmon",
+    "podman-plugins",
+    "slirp4netns",
+    "crun",
+    "isc-dhcp-server",
+    "tftpd-hpa",
+    "ptpd",
+    "lldpd",
+    "snmpd",
+]
 
-APT_WALT_DEPENDENCIES_PACKAGES = """
-        apt-transport-https ca-certificates gnupg2 curl gnupg-agent
-        software-properties-common binfmt-support qemu-user-static
-        lldpd snmp snmpd openssh-server snmp-mibs-downloader iputils-ping
-        libsmi2-dev isc-dhcp-server bind9 nfs-kernel-server postgresql
-        ntpdate ntp lockfile-progs ptpd tftpd-hpa ebtables bridge-utils
-        screen ifupdown gcc python3-dev git make sudo expect libjson-perl
-        docker.io podman buildah skopeo bash-completion dropbear-bin
-        ksmtuned fdisk e2fsprogs dosfstools containernetworking-plugins
-        uuid-runtime qemu-system-x86 netcat-openbsd lsof
-""".split()
+APT_WALT_DEPENDENCIES_PACKAGES = [
+    "apt-transport-https",
+    "ca-certificates",
+    "gnupg2",
+    "curl",
+    "gnupg-agent",
+    "software-properties-common",
+    "binfmt-support",
+    "qemu-user-static",
+    "lldpd",
+    "snmp",
+    "snmpd",
+    "openssh-server",
+    "snmp-mibs-downloader",
+    "iputils-ping",
+    "libsmi2-dev",
+    "isc-dhcp-server",
+    "bind9",
+    "nfs-kernel-server",
+    "postgresql",
+    "ntpdate",
+    "ntp",
+    "lockfile-progs",
+    "ptpd",
+    "tftpd-hpa",
+    "ebtables",
+    "bridge-utils",
+    "screen",
+    "ifupdown",
+    "gcc",
+    "python3-dev",
+    "git",
+    "make",
+    "sudo",
+    "expect",
+    "libjson-perl",
+    "docker.io",
+    "podman",
+    "buildah",
+    "skopeo",
+    "bash-completion",
+    "dropbear-bin",
+    "ksmtuned",
+    "fdisk",
+    "e2fsprogs",
+    "dosfstools",
+    "containernetworking-plugins",
+    "uuid-runtime",
+    "qemu-system-x86",
+    "netcat-openbsd",
+    "lsof",
+]
 
 # note: containernetworking-plugins is needed for "walt image build".
 # for some reason, it seems to be missing from the dependencies of buildah.
@@ -140,11 +198,10 @@ def fix_apt_sources(silent_override=False):
         # new distribution using a deb822-style file at sources.list.d/debian.sources
         if debian_sources.read_text() != APT_DEBIAN_SOURCES_CONTENT:
             update_apt_sources_list_d = True
-    else:
-        # old distribution, or new distribution manually updated, using
-        # old-style sources.list
-        if sources_list.read_text() != APT_SOURCES_LIST_CONTENT:
-            update_apt_sources_list = True
+    # old distribution, or new distribution manually updated, using
+    # old-style sources.list
+    elif sources_list.read_text() != APT_SOURCES_LIST_CONTENT:
+        update_apt_sources_list = True
     if obsolete_docker_list.exists():
         update_apt_sources_list_d = True
     # update /etc/apt/sources.list
@@ -212,7 +269,7 @@ def fix_packets(upgrade_dist=False, upgrade_packets=False):
     upgrade_and_install_packages(
         "WalT dependencies",
         APT_WALT_DEPENDENCIES_PACKAGES,
-        upgrade_packets=upgrade_packets
+        upgrade_packets=upgrade_packets,
     )
     if upgrade_dist:
         autoremove_packages()
@@ -221,7 +278,7 @@ def fix_packets(upgrade_dist=False, upgrade_packets=False):
 def upgrade_db():
     clusters_info = json.loads(
         subprocess.run(
-            "pg_lsclusters -j".split(), check=True, stdout=subprocess.PIPE
+            ["pg_lsclusters", "-j"], check=True, stdout=subprocess.PIPE
         ).stdout
     )
     num_clusters = len(clusters_info)
@@ -287,13 +344,17 @@ def upgrade_os():
         )
         if __version__.startswith("0."):
             # dev version, published on testpypi
-            repo_opts = ("--index-url https://pypi.org/simple"
-                         " --extra-index-url https://test.pypi.org/simple")
+            repo_opts = (
+                "--index-url https://pypi.org/simple"
+                " --extra-index-url https://test.pypi.org/simple"
+            )
         else:
             repo_opts = ""
         subprocess.run(
-            (f"{pip_install} {repo_opts}"
-             f" walt-server=={__version__} walt-client=={__version__}").split(),
+            (
+                f"{pip_install} {repo_opts}"
+                f" walt-server=={__version__} walt-client=={__version__}"
+            ).split(),
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             check=True,
@@ -377,7 +438,7 @@ def cleanup_old_walt_install():
     print("Looking for obsolete WalT packages... ", end="")
     sys.stdout.flush()
     proc = subprocess.run(
-        "python3 -m pip list --format json".split(),
+        ["python3", "-m", "pip", "list", "--format", "json"],
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -395,7 +456,7 @@ def cleanup_old_walt_install():
             print("Removing obsolete WalT packages... ", end="")
             sys.stdout.flush()
             subprocess.run(
-                "python3 -m pip uninstall -y".split() + walt_packages,
+                ["python3", "-m", "pip", "uninstall", "-y"] + walt_packages,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
@@ -403,8 +464,8 @@ def cleanup_old_walt_install():
     # restore the PATH variable
     os.environ["PATH"] = saved_path
     # clear old /opt/walt-<version> directories
-    for opt_entry in Path('/opt').iterdir():
-        if opt_entry.name.startswith('walt-') and opt_entry != Path(sys.prefix):
+    for opt_entry in Path("/opt").iterdir():
+        if opt_entry.name.startswith("walt-") and opt_entry != Path(sys.prefix):
             print(f"Removing obsolete {opt_entry}... ", end="")
             sys.stdout.flush()
             shutil.rmtree(str(opt_entry))

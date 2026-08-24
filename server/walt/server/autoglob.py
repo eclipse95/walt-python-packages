@@ -83,13 +83,13 @@ class State:
         option2 = ",".join((self.name + tglob) for tglob in target_globs)
         if len(option1) < len(option2):
             return option1
-        elif len(option1) > len(option2):
+        if len(option1) > len(option2):
             return option2
-        elif optional_value:  # same length, but optional value notation may be
+        if optional_value:  # same length, but optional value notation may be
             # more readable
             return option1
-        else:  # same length, so keep it simple and repeat prefix
-            return option2
+        # same length, so keep it simple and repeat prefix
+        return option2
 
     def __str__(self):
         lines = [self.name]

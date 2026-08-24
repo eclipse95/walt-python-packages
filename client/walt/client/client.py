@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # isort: skip_file
-"""
-WalT (wireless testbed) control tool.
-"""
+"""WalT (wireless testbed) control tool."""
+
 import sys
 
 # run early startup hooks as soon as possible

@@ -20,7 +20,7 @@
 # cache and returned.
 
 
-class ReusePool(object):
+class ReusePool:
     def __init__(self, cls):
         self.cls = cls
         self.pool = {}

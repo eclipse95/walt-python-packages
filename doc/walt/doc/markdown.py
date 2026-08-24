@@ -7,22 +7,23 @@ import textwrap
 from pygments import highlight
 from pygments.formatters import Terminal256Formatter
 from pygments.lexers import get_lexer_by_name
+
+from walt.common.term import TTYSettings
 from walt.doc.color import (
     BG_COLOR_DEFAULT,
     BG_COLOR_LIGHT_GREY,
     BG_COLOR_WHITE,
     FG_COLOR_BLACK,
     FG_COLOR_BLUE,
-    FG_COLOR_DEFAULT,
     FG_COLOR_DARK_RED,
+    FG_COLOR_DEFAULT,
     RE_ESC_COLOR,
     RE_ESC_MOVE_RIGHT,
     FormatState,
     get_transition_esc_sequence,
-    optimize_and_reset_default_colors
+    optimize_and_reset_default_colors,
 )
 from walt.doc.mdtable import detect_table, render_table
-from walt.common.term import TTYSettings
 
 FG_COLOR_MARKDOWN = FG_COLOR_BLACK
 BG_COLOR_MARKDOWN = BG_COLOR_WHITE
@@ -68,7 +69,7 @@ class MarkdownRenderer:
             getattr(self, type_)(event["node"], event["entering"])
             event = walker.nxt()
         optimized_buf = optimize_and_reset_default_colors(
-                self.buf, FG_COLOR_DEFAULT, BG_COLOR_DEFAULT
+            self.buf, FG_COLOR_DEFAULT, BG_COLOR_DEFAULT
         )
         return optimized_buf, self.max_width
 
@@ -128,20 +129,19 @@ class MarkdownRenderer:
                 if self.link_num == self.selected_link_num:
                     self.pop_context()
                 self.link_num += 1
-        else:
-            if not entering:
-                # prefix <url> with "http://<hostname>" if relative
-                url = node.destination
-                if not url.startswith("http"):
-                    h = socket.gethostname()
-                    url = url.lstrip("/")
-                    url = f"http://{h}/{url}"
-                # then replace [<text>](<url>) -> <text> (<url>)
-                self.lit(" (")
-                self.stack_context(fg_color=FG_COLOR_URL)
-                self.lit(url)
-                self.pop_context()
-                self.lit(")")
+        elif not entering:
+            # prefix <url> with "http://<hostname>" if relative
+            url = node.destination
+            if not url.startswith("http"):
+                h = socket.gethostname()
+                url = url.lstrip("/")
+                url = f"http://{h}/{url}"
+            # then replace [<text>](<url>) -> <text> (<url>)
+            self.lit(" (")
+            self.stack_context(fg_color=FG_COLOR_URL)
+            self.lit(url)
+            self.pop_context()
+            self.lit(")")
 
     def paragraph(self, node, entering):
         if entering:
@@ -289,7 +289,7 @@ class MarkdownRenderer:
     def add_line_prefix(self, lineno, line, breakpoints, line_number_width):
         elements = ()
         if breakpoints is not None:
-            elements += ("\u2BC3" if lineno in breakpoints else " ",)
+            elements += ("\u2bc3" if lineno in breakpoints else " ",)
         if line_number_width is not None:
             elements += (f"{lineno:>{line_number_width}}",)
         if len(elements) > 0:
@@ -298,18 +298,20 @@ class MarkdownRenderer:
         return " ".join(elements)
 
     def add_line_prefixes(self, lines, breakpoints, line_number_width):
-        return [self.add_line_prefix(n+1, line, breakpoints, line_number_width)
-                for n, line in enumerate(lines)]
+        return [
+            self.add_line_prefix(n + 1, line, breakpoints, line_number_width)
+            for n, line in enumerate(lines)
+        ]
 
     def code_block(self, node, entering):
         code_text = self.pre_format_code_block(node.literal)
         colored_text = code_text  # if we cannot perform syntax highlighting
         params = {}
         enable_linenos = False
-        if node.info != '':
+        if node.info != "":
             language = None
             for spec in node.info.split():
-                if '=' in spec:
+                if "=" in spec:
                     param, value = spec.split("=")
                     params[param] = value
                 elif spec == "linenos":
@@ -323,10 +325,10 @@ class MarkdownRenderer:
                     colored_text = colored_text.rstrip("\n")
                 except Exception:  # syntax highlighting failed: just use the raw code
                     colored_text = code_text
-        highlight_line = params.get("highlight-line", None)
-        breakpoints = params.get("breakpoints", None)
+        highlight_line = params.get("highlight-line")
+        breakpoints = params.get("breakpoints")
         if breakpoints is not None:
-            if breakpoints == '':
+            if breakpoints == "":
                 breakpoints = ()
             else:
                 breakpoints = set(int(line) for line in breakpoints.split(","))
@@ -335,22 +337,20 @@ class MarkdownRenderer:
             line_number_width = len(str(len(code_lines)))
         else:
             line_number_width = None
-        code_lines = self.add_line_prefixes(
-                code_lines, breakpoints, line_number_width)
+        code_lines = self.add_line_prefixes(code_lines, breakpoints, line_number_width)
         colored_lines = colored_text.split("\n")
         colored_lines = self.add_line_prefixes(
-                colored_lines, breakpoints, line_number_width)
+            colored_lines, breakpoints, line_number_width
+        )
         if highlight_line is not None:
             highlight_line = int(highlight_line) - 1  # 1-indexing -> 0-indexing
             sections = (
                 (0, highlight_line, BG_COLOR_SOURCE_CODE),
-                (highlight_line, highlight_line+1, BG_COLOR_SOURCE_CODE_HIGHLIGHT),
-                (highlight_line+1, len(code_lines), BG_COLOR_SOURCE_CODE),
+                (highlight_line, highlight_line + 1, BG_COLOR_SOURCE_CODE_HIGHLIGHT),
+                (highlight_line + 1, len(code_lines), BG_COLOR_SOURCE_CODE),
             )
         else:
-            sections = (
-                (0, len(code_lines), BG_COLOR_SOURCE_CODE),
-            )
+            sections = ((0, len(code_lines), BG_COLOR_SOURCE_CODE),)
         code_width = max(len(line) for line in code_text.split("\n")) + 1
         code_width = max(code_width, self.target_width)
         for section_start, section_end, bg_color in sections:
@@ -362,22 +362,19 @@ class MarkdownRenderer:
             # or background color, we have to make a pass to revert those escape
             # codes and get the default colors we want.
             section_colored_text = optimize_and_reset_default_colors(
-                "\n".join(section_colored_lines),
-                FG_COLOR_SOURCE_CODE,
-                bg_color
+                "\n".join(section_colored_lines), FG_COLOR_SOURCE_CODE, bg_color
             )
             section_code_text = "\n".join(section_code_lines)
             for code_line, colored_line in zip(
                 section_code_text.split("\n"), section_colored_text.split("\n")
             ):
-                self.stack_context(
-                    fg_color=FG_COLOR_SOURCE_CODE, bg_color=bg_color
-                )
+                self.stack_context(fg_color=FG_COLOR_SOURCE_CODE, bg_color=bg_color)
                 # paste the colored line, then kill ('\e[K') in order to paint the
                 # rest with background color of source code, then move to the right
                 # ('\e[<N>C') up to the edge of code block
-                self.lit(colored_line + "\x1b[K\x1b[%dC" %
-                         (code_width - len(code_line)))
+                self.lit(
+                    colored_line + "\x1b[K\x1b[%dC" % (code_width - len(code_line))
+                )
                 # this will restore markdown background color
                 self.pop_context()
                 # line feed

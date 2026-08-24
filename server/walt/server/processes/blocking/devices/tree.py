@@ -28,7 +28,7 @@ class ASCII_CHARSET:
     SPACE = " "
 
 
-class Tree(object):
+class Tree:
     """Class allowing to display an object graph as a tree."""
 
     def __init__(self, stdout_encoding):
@@ -58,7 +58,7 @@ class Tree(object):
             for node in self.nodes.values():
                 node["children"] = sorted(
                     node["children"],
-                    key=lambda t: (t[0].__class__.__name__,) + tuple(t)
+                    key=lambda t: (t[0].__class__.__name__,) + tuple(t),
                 )
             self.up_to_date = True
 

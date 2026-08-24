@@ -52,7 +52,7 @@ This operation would reboot %d node(s) currently using the image.
 """
 
 
-class NodeImageStore(object):
+class NodeImageStore:
     def __init__(self, server: Server):
         self.server = server
         self.registry = server.registry
@@ -68,7 +68,7 @@ class NodeImageStore(object):
         self._cleaning_up = False
 
     def resync_from_db(self):
-        "Synchronization function called on daemon startup."
+        """Synchronization function called on daemon startup."""
         db_images = set(db_img.fullname for db_img in self.db.select("images"))
         # gather local images
         podman_images = set(self.registry.get_images())
@@ -85,30 +85,27 @@ class NodeImageStore(object):
                     # add missing image in this store
                     self.images[db_fullname] = NodeImage(self, db_fullname)
                     continue
-                else:
-                    # image is known and found in db, but missing in walt (podman)
-                    # images check if we should pull images from docker daemon to podman
-                    # storage (migration v4->v5)
-                    if docker_images is None:  # Loaded on-demand
-                        docker_images = set(
-                            self.blocking.sync_list_docker_daemon_images()
-                        )
-                    if db_fullname in docker_images:
-                        print(MSG_PULLING_FROM_DOCKER % db_fullname)
-                        self.blocking.sync_pull_docker_daemon_image(db_fullname)
-                        self.images[db_fullname] = NodeImage(self, db_fullname)
-                        continue
-                    # Ready, but not found anywhere
-                    print(
-                        "Unable to find image %s. Hope it is not used and remove it."
-                        % db_fullname,
-                        file=sys.stderr,
-                    )
-                    self.db.delete("images", fullname=db_fullname)
-                    self.db.commit()
+                # image is known and found in db, but missing in walt (podman)
+                # images check if we should pull images from docker daemon to podman
+                # storage (migration v4->v5)
+                if docker_images is None:  # Loaded on-demand
+                    docker_images = set(self.blocking.sync_list_docker_daemon_images())
+                if db_fullname in docker_images:
+                    print(MSG_PULLING_FROM_DOCKER % db_fullname)
+                    self.blocking.sync_pull_docker_daemon_image(db_fullname)
+                    self.images[db_fullname] = NodeImage(self, db_fullname)
+                    continue
+                # Ready, but not found anywhere
+                print(
+                    "Unable to find image %s. Hope it is not used and remove it."
+                    % db_fullname,
+                    file=sys.stderr,
+                )
+                self.db.delete("images", fullname=db_fullname)
+                self.db.commit()
 
     def resync_from_registry(self, rescan=False):
-        "Resync function podman repo -> this image store"
+        """Resync function podman repo -> this image store"""
         db_images = set(db_img.fullname for db_img in self.db.select("images"))
         # gather local images
         if rescan:
@@ -141,15 +138,17 @@ class NodeImageStore(object):
         # we ignore the final reboot status of nodes
         def final_task_cb(status=None):
             task_cb(None)
+
         update_info = {}
         for fullname, image in self.images.items():
-            if (    fullname.startswith('waltplatform/') and \
-                    fullname.endswith('-default:latest')
+            if fullname.startswith("waltplatform/") and fullname.endswith(
+                "-default:latest"
             ):
                 update_info[fullname] = image.created_ts
         if len(update_info) > 0:
+
             def after_update_cb(result):
-                if result[0] == 'OK':
+                if result[0] == "OK":
                     updated_fullnames = result[1]
                     if len(updated_fullnames) > 0:
                         self.server.reboot_nodes_after_image_change(
@@ -159,9 +158,10 @@ class NodeImageStore(object):
                         final_task_cb()
                 else:
                     final_task_cb()
+
             blocking_func = functools.partial(
-                    self.blocking.update_default_images,
-                    requester, update_info=update_info)
+                self.blocking.update_default_images, requester, update_info=update_info
+            )
             handle_missing_credentials(requester, blocking_func, after_update_cb)
         else:
             final_task_cb()
@@ -220,6 +220,8 @@ class NodeImageStore(object):
     ):
         """Look for an image belonging to the requester.
 
+        :param requester:
+        :param image_name:
         :param expected: specify if we expect a matching result (True), no
         matching result (False), or if both options are ok (expected = None).
         If expected is True or False and the result does not match expectation,
@@ -270,9 +272,11 @@ class NodeImageStore(object):
         wf.next()
 
     def _plan_next_update_wf(self):
-        if      (not self._cleaning_up and
-                 self._planned_update_wf is None and
-                 len(self.deadlines) > 0):
+        if (
+            not self._cleaning_up
+            and self._planned_update_wf is None
+            and len(self.deadlines) > 0
+        ):
             self._planned_update_wf = Workflow(
                 [self.wf_update_image_mounts, self._wf_after_plan_next_update_wf]
             )
@@ -332,13 +336,12 @@ class NodeImageStore(object):
                 # first time check: set the deadline value
                 self.deadlines[image_id] = curr_time + MOUNT_GRACE_TIME
                 all_mounts.add(image_id)
+            # next checks: really umount after the deadline expired
+            elif deadline < curr_time:
+                changes = True
+                to_be_unmounted.add(image_id)
             else:
-                # next checks: really umount after the deadline expired
-                if deadline < curr_time:
-                    changes = True
-                    to_be_unmounted.add(image_id)
-                else:
-                    all_mounts.add(image_id)  # deadline not reached yet
+                all_mounts.add(image_id)  # deadline not reached yet
         if changes:
             # retrieve info for next steps
             images_info = set(
@@ -362,7 +365,7 @@ class NodeImageStore(object):
             update_wf.update_env(
                 to_be_mounted=to_be_mounted,
                 to_be_unmounted=to_be_unmounted,
-                images_info=images_info
+                images_info=images_info,
             )
         else:
             # finalize this update
@@ -378,9 +381,9 @@ class NodeImageStore(object):
         if len(to_be_mounted) > 0:
             steps = []
             for image_id, image_kib in to_be_mounted:
-                step = functools.partial(self._wf_mount,
-                                         image_id=image_id,
-                                         image_kib=image_kib)
+                step = functools.partial(
+                    self._wf_mount, image_id=image_id, image_kib=image_kib
+                )
                 steps.append(step)
             update_wf.insert_parallel_steps(steps)
         update_wf.next()
@@ -411,7 +414,9 @@ class NodeImageStore(object):
                 [
                     self.exports.wf_update_image_exports,
                     self._wf_unmount_images,
-                ], images_info=[], to_be_unmounted=to_be_unmounted
+                ],
+                images_info=[],
+                to_be_unmounted=to_be_unmounted,
             )
             wf.run()
 
@@ -458,9 +463,10 @@ class NodeImageStore(object):
             return
         self.mounts.add(image_id)
         self.server.ev_loop.do(
-                f"walt-image-mount {image_id} {image_kib}",
-                functools.partial(self._wf_check_retcode, wf, "mount"),
-                silent=False)
+            f"walt-image-mount {image_id} {image_kib}",
+            functools.partial(self._wf_check_retcode, wf, "mount"),
+            silent=False,
+        )
 
     def _wf_unmount(self, wf, image_id, **env):
         self.deadlines.pop(image_id, None)
@@ -469,9 +475,10 @@ class NodeImageStore(object):
             return
         self.mounts.remove(image_id)
         self.server.ev_loop.do(
-                f"walt-image-umount {image_id}",
-                functools.partial(self._wf_check_retcode, wf, "umount"),
-                silent=False)
+            f"walt-image-umount {image_id}",
+            functools.partial(self._wf_check_retcode, wf, "umount"),
+            silent=False,
+        )
 
     def _wf_check_retcode(self, wf, verb, retcode, **env):
         if retcode != 0:
@@ -500,8 +507,8 @@ class NodeImageStore(object):
             if image_name is None:
                 # no 'preferred-name' tag, reuse name of default image
                 image_name = default_image.split("/")[1]
-            if ':' not in image_name:
-                image_name = image_name + ':latest'
+            if ":" not in image_name:
+                image_name = image_name + ":latest"
             image_node_models = self.images[default_image].node_models
             image_node_models_desc = self.images[default_image].node_models_desc
             ws_image = username + "/" + image_name

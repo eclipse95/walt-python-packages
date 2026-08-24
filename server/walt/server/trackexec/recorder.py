@@ -1,18 +1,24 @@
 import gzip
-import numpy as np
 import sys
 import tarfile
-
 from contextlib import nullcontext
 from os import getpid
 from os.path import dirname
 from time import time
+
+import numpy as np
+
 from walt.server.trackexec.const import (
-        OpCodes, MAP_FILE_SIZE, SEC_AS_TS, MAP_BLOCK_UINT16_SIZE
+    MAP_BLOCK_UINT16_SIZE,
+    MAP_FILE_SIZE,
+    SEC_AS_TS,
+    OpCodes,
 )
 from walt.server.trackexec.tools import (
-        Uint16Stack, map_block_dt, index_block_dt,
-        LogAbstractManagement
+    LogAbstractManagement,
+    Uint16Stack,
+    index_block_dt,
+    map_block_dt,
 )
 
 TRACKEXEC_SRC_PREFIX = dirname(__file__) + "/"
@@ -26,7 +32,7 @@ class TrackExecRecorder(LogAbstractManagement):
         super().__init__(dir_path)
         dir_path.mkdir(parents=True, exist_ok=True)
         if hasattr(mod_or_package, "__path__"):
-            self._prefix = mod_or_package.__path__[0] + '/'
+            self._prefix = mod_or_package.__path__[0] + "/"
             self._module_file = None
         else:
             self._prefix = None
@@ -35,15 +41,17 @@ class TrackExecRecorder(LogAbstractManagement):
         self._num_saved_filenames = 0
         self._file_id_per_code_id = {}
         self._id_per_filename = {}
-        self._stack = np.empty(MAP_BLOCK_UINT16_SIZE,
-                np.dtype([('file_id', np.uint16), ('lineno', np.uint16)]))
+        self._stack = np.empty(
+            MAP_BLOCK_UINT16_SIZE,
+            np.dtype([("file_id", np.uint16), ("lineno", np.uint16)]),
+        )
         self._stack_size = 0
         self._bytecode = Uint16Stack()
         self._map_block = np.zeros(1, dtype=map_block_dt(0))
         self._index_block = np.zeros(1, dtype=index_block_dt())
         self._last_timestamp = None
         self._timestamp_requested = False
-        self._pt_section = False   # precise-timestamping sections
+        self._pt_section = False  # precise-timestamping sections
         self._pid = getpid()
         self._current_lineno = LINENO_UNDEFINED
         (dir_path / "pid").write_text(f"{self._pid}\n")
@@ -85,13 +93,13 @@ class TrackExecRecorder(LogAbstractManagement):
         ts = int(time() * SEC_AS_TS)
         if self._last_timestamp is None or ts > self._last_timestamp:
             self._last_timestamp = ts
-        self._index_block[0]['timestamp'] = self._last_timestamp
+        self._index_block[0]["timestamp"] = self._last_timestamp
         self._min_stack_size = stack_size
         self._map_block = self._map_block.view(dtype=map_block_dt(stack_size))
         bl_content = self._map_block[0]
-        bl_content['stack_size'] = stack_size
-        bl_content['stack'] = self._stack[:stack_size]
-        self._max_bytecode_len = len(bl_content['bytecode'])
+        bl_content["stack_size"] = stack_size
+        bl_content["stack"] = self._stack[:stack_size]
+        self._max_bytecode_len = len(bl_content["bytecode"])
         self._bytecode.reset()
 
     def _write_block(self, force_flush_map_file=False):
@@ -99,22 +107,22 @@ class TrackExecRecorder(LogAbstractManagement):
             self._update_log_sources_archive()
             self._num_saved_filenames = len(self._filenames)
         self._bytecode.pad(OpCodes.END, self._max_bytecode_len)
-        self._map_block[0]['bytecode'] = self._bytecode.view()
+        self._map_block[0]["bytecode"] = self._bytecode.view()
         self._log_map_path.parent.mkdir(exist_ok=True)
         with self._log_map_path.open("ab") as f:
             f.write(self._map_block.tobytes())
             if force_flush_map_file:
                 flush_map_file = True
             else:
-                flush_map_file = (f.tell() == MAP_FILE_SIZE)
+                flush_map_file = f.tell() == MAP_FILE_SIZE
         if flush_map_file:
             # compress the map file
-            with gzip.open(str(self._log_map_gz_path), 'wb') as f_w:
+            with gzip.open(str(self._log_map_gz_path), "wb") as f_w:
                 f_w.write(self._log_map_path.read_bytes())
             self._log_map_path.unlink()
             # switch to next logmap file
             self._log_map_num += 1
-        self._index_block[0]['min_stack_size'] = self._min_stack_size
+        self._index_block[0]["min_stack_size"] = self._min_stack_size
         with self._log_index_path.open("ab") as f:
             f.write(self._index_block.tobytes())
 
@@ -156,17 +164,17 @@ class TrackExecRecorder(LogAbstractManagement):
         if self._pid != getpid():
             # this is the code of a forked child, bypass and disable
             sys.settrace(None)
-            return
+            return None
         file_id = self._get_file_id(frame)
         if file_id == -1:
-            return
+            return None
         # if moving into the same file, preserve the current lineno as a
         # reference for possibly stripping out next LINE opcode; otherwise,
         # forget it.
         if (
-                self._stack_size == 0 or
-                self._stack[self._stack_size-1]["file_id"] != file_id
-           ):
+            self._stack_size == 0
+            or self._stack[self._stack_size - 1]["file_id"] != file_id
+        ):
             self._current_lineno = LINENO_UNDEFINED
         self._ensure_block_has_room(2)
         self._bytecode.add(OpCodes.CALL)
@@ -176,7 +184,7 @@ class TrackExecRecorder(LogAbstractManagement):
         return self._trace_local_function
 
     def _trace_local_function(self, frame, event, arg):
-        if event == 'return':
+        if event == "return":
             # optimize:
             # 1. strip out "CALL <fileid>; RETURN;" sequences
             # 2. thanks to the management of _current_lineno, the fact we
@@ -195,17 +203,14 @@ class TrackExecRecorder(LogAbstractManagement):
                 # if returning to some location of the same file, preserve the
                 # current lineno as a reference for possibly stripping out next
                 # LINE opcode; otherwise, forget it.
-                top_of_stack = self._stack[:self._stack_size][-2:]
+                top_of_stack = self._stack[: self._stack_size][-2:]
                 if (
-                        len(top_of_stack) < 2 or
-                        top_of_stack[0]["file_id"] != top_of_stack[1]["file_id"]
-                   ):
+                    len(top_of_stack) < 2
+                    or top_of_stack[0]["file_id"] != top_of_stack[1]["file_id"]
+                ):
                     self._current_lineno = LINENO_UNDEFINED
             self._stack_size -= 1
-            self._min_stack_size = min(
-                self._min_stack_size,
-                self._stack_size
-            )
+            self._min_stack_size = min(self._min_stack_size, self._stack_size)
         elif event == "line":
             # if traversing a precise timestamping section,
             # record the timestamp of each instruction
@@ -218,7 +223,7 @@ class TrackExecRecorder(LogAbstractManagement):
             if lineno != self._current_lineno:
                 self._ensure_block_has_room(1)
                 self._bytecode.add(lineno)
-                self._stack[self._stack_size-1]["lineno"] = lineno
+                self._stack[self._stack_size - 1]["lineno"] = lineno
                 self._current_lineno = lineno
 
     def _record_timestamp(self):
@@ -226,15 +231,14 @@ class TrackExecRecorder(LogAbstractManagement):
         self._bytecode.add(OpCodes.TIMESTAMP)
         # we ensure we record a monotonic suite of timestamps
         ts = int(time() * SEC_AS_TS)
-        if ts < self._last_timestamp:
-            ts = self._last_timestamp
+        ts = max(ts, self._last_timestamp)
         # record an offset from the last timestamp, for lower values
         # and better compressability
         ts_offset = ts - self._last_timestamp
         # encode the timestamp ensuring none of the four uint16 values
         # could match an opcode.
         for _ in range(4):
-            self._bytecode.add((ts_offset & 0x7fff)+1)
+            self._bytecode.add((ts_offset & 0x7FFF) + 1)
             ts_offset >>= 15
         self._last_timestamp = ts
 
@@ -251,9 +255,9 @@ class TrackExecRecorder(LogAbstractManagement):
 
     def _stop(self):
         """Function for stopping and flushing"""
-        sys.settrace(None)                              # stop tracing
-        self._record_timestamp()                        # record a final timestamp
-        self._write_block(force_flush_map_file=True)    # flush
+        sys.settrace(None)  # stop tracing
+        self._record_timestamp()  # record a final timestamp
+        self._write_block(force_flush_map_file=True)  # flush
 
     @classmethod
     def record(cls, *args):
@@ -266,8 +270,7 @@ class TrackExecRecorder(LogAbstractManagement):
     def precise_timestamping(cls):
         if cls._instance is not None:
             return cls._instance
-        else:
-            return nullcontext()
+        return nullcontext()
 
     @classmethod
     def stop(cls):

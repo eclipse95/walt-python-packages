@@ -1,5 +1,3 @@
-import socket
-
 from walt.common.config import load_conf
 
 CONFIG_FILE_TOP_COMMENT = """\
@@ -33,6 +31,7 @@ def ask_config_item(key, coded=False):
     while True:
         if coded:
             from getpass import getpass
+
             value = getpass(msg)
         else:
             value = input(msg)
@@ -53,6 +52,7 @@ def decode(coded_value):
 def get_config_file():
     from os.path import expanduser
     from pathlib import Path
+
     p = Path(expanduser("~/.walt/config"))
     if not p.exists():
         legacy_p = Path(expanduser("~/.waltrc"))
@@ -126,9 +126,8 @@ def iter_conf_items(conf_dict, path=(), iter_leaves=True, iter_groups=True):
             if iter_groups:
                 yield "group", new_path, conf_dict, item_name, item_conf
             yield from iter_conf_items(item_conf, new_path)
-        else:
-            if iter_leaves:
-                yield "leaf", new_path, conf_dict, item_name, item_conf
+        elif iter_leaves:
+            yield "leaf", new_path, conf_dict, item_name, item_conf
 
 
 class ConfigFileSaver:
@@ -147,8 +146,7 @@ class ConfigFileSaver:
         if len(path) == 2 and path[0] == "registries":
             if path[1] == "hub":
                 return "Docker Hub credentials"
-            else:
-                return f'Credentials for registry "{path[1]}"'
+            return f'Credentials for registry "{path[1]}"'
 
     def save(self):
         # concatenate all and write the file
@@ -171,11 +169,13 @@ class ConfigFileSaver:
 
     def underline(self, line):
         import re
+
         dashes = re.sub(".", "-", line)
         return f"{line}\n{dashes}"
 
     def printed(self):
         import yaml
+
         lines = [""]
         self.comment_section(lines, CONFIG_FILE_TOP_COMMENT)
         lines.append("")
@@ -235,12 +235,13 @@ def resolve_new_user():
     server_check = "server" not in conf_dict["walt"]
     if server_check:
         from walt.client.plugins import get_hook
+
         hook = get_hook("config_missing_server")
         if hook is not None:
             server_check = hook()
     print(
         "You are a new user of this WalT platform, "
-        + "and this command requires a few configuration items."
+        "and this command requires a few configuration items."
     )
     use_hub = False
     while True:
@@ -252,6 +253,7 @@ def resolve_new_user():
             )
         if username_update:
             from walt.client.tools import yes_or_no
+
             use_hub = yes_or_no(
                 "Do you intend to push or pull images to/from the docker hub?",
                 okmsg=None,
@@ -261,7 +263,7 @@ def resolve_new_user():
                 ensure_group_path(conf_dict, "registries", "hub")
                 print(
                     "Please get an account at hub.docker.com if not done yet, "
-                    + "then specify credentials here."
+                    "then specify credentials here."
                 )
                 conf_dict["registries"]["hub"].update(
                     username=ask_config_item("username"),
@@ -360,10 +362,10 @@ def test_config(registry_name=None):
                         del conf_dict["registries"][registry_name]["username"]
                         del conf_dict["registries"][registry_name]["password"]
                         return False, True
-    except socket.error:
+    except OSError:
         print(
             "FAILED. The value of 'walt.server' you entered seems invalid "
-            + "(or the server is down?)."
+            "(or the server is down?)."
         )
         print()
         del conf_dict["walt"]["server"]
@@ -401,17 +403,15 @@ class Conf:
                 # leaf value
                 if attr in conf_obj:
                     return {"type": "present-leaf", "value": conf_obj[attr]}
-                else:
 
-                    def resolve():
-                        conf_spec.resolve()
-                        save_config()
+                def resolve():
+                    conf_spec.resolve()
+                    save_config()
 
-                    return {"type": "missing-leaf", "resolve": resolve}
-            else:
-                # category node
-                if attr not in conf_obj:
-                    conf_obj[attr] = {}
+                return {"type": "missing-leaf", "resolve": resolve}
+            # category node
+            if attr not in conf_obj:
+                conf_obj[attr] = {}
             conf_obj = conf_obj[attr]
         return {"type": "category", "value": conf_obj}
 
@@ -421,11 +421,11 @@ class Conf:
         path_info = self._analyse_path(path)
         if path_info["type"] == "present-leaf":
             return path_info["value"]
-        elif path_info["type"] == "missing-leaf":
+        if path_info["type"] == "missing-leaf":
             path_info["resolve"]()
             return self.__getattr__(attr)  # redo
-        else:  # category
-            return Conf(path)
+        # category
+        return Conf(path)
 
     def hasattr(self, attr):
         path = self._path + (attr,)

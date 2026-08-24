@@ -15,8 +15,8 @@ from walt.server.processes.blocking.images.squash import squash
 from walt.server.processes.blocking.images.update import update_default_images
 from walt.server.processes.blocking.registries import (
     DockerDaemonClient,
-    get_registry_client,
     MissingRegistryCredentials,
+    get_registry_client,
 )
 
 
@@ -52,8 +52,7 @@ class CachingRequester:
         username = self._remote_requester.get_registry_username(registry_label)
         if username is None:
             raise MissingRegistryCredentials(registry_label)
-        else:
-            return username
+        return username
 
     # other attributes & methods are not cached because they have
     # side effects remotely or remote values may change during the time
@@ -105,14 +104,12 @@ class BlockingTasksContextService:
     def list_docker_daemon_images(self):
         if self.docker_daemon is None:
             return []
-        else:
-            return self.docker_daemon.images()
+        return self.docker_daemon.images()
 
     def pull_docker_daemon_image(self, fullname):
         if self.docker_daemon is None:
-            return
-        else:
-            return self.docker_daemon.pull(None, self.server, fullname)
+            return None
+        return self.docker_daemon.pull(None, self.server, fullname)
 
     def rescan_topology(self, *args, **kwargs):
         return self.topology.rescan(
@@ -136,7 +133,8 @@ class BlockingTasksContextService:
     def report_lldp_neighbor(self, *args, **kwargs):
         self.topology.report_lldp_neighbor(self.server, self.db, *args, **kwargs)
 
-class BlockingTasksService(object):
+
+class BlockingTasksService:
     def __init__(self):
         if docker is not None:
             self.docker_daemon = DockerDaemonClient()

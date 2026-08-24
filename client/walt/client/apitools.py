@@ -15,14 +15,13 @@ def silent_server_link():
 def device_set_to_str(device_set):
     if hasattr(device_set, "name"):  # works for APINodeBase
         return device_set.name
-    elif isinstance(device_set, str):
+    if isinstance(device_set, str):
         return device_set
-    else:
-        # it may be an iterable (APISetOfNodesBase, set(), tuple(), list(), ...)
-        try:
-            return ",".join(device_set_to_str(device) for device in device_set)
-        except TypeError:
-            return None
+    # it may be an iterable (APISetOfNodesBase, set(), tuple(), list(), ...)
+    try:
+        return ",".join(device_set_to_str(device) for device in device_set)
+    except TypeError:
+        return None
 
 
 def get_devices_names(server, device_set, allowed_device_set):

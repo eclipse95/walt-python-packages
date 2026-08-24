@@ -7,8 +7,8 @@ from time import time
 from walt.common.api import api, api_expose_method
 from walt.common.constants import WALT_SERVER_DAEMON_PORT
 from walt.common.reusable import reusable
-from walt.common.tcp import Requests, RWSocketFile, MyPickle as pickle
-from walt.common.tcp import set_tcp_nodelay
+from walt.common.tcp import MyPickle as pickle
+from walt.common.tcp import Requests, RWSocketFile, set_tcp_nodelay
 from walt.common.tools import BusyIndicator
 
 SERVER_SOCKET_TIMEOUT = 10.0
@@ -18,7 +18,7 @@ SERVER_SOCKET_REUSE_TIMEOUT = 5.0
 # This class is used both on the client and on the server.
 # It should be backward-compatible with the "line-repr-eval"
 # mode, in order to communicate with legacy code using it.
-class APIChannel(object):
+class APIChannel:
     def __init__(self, sock_file):
         self.sock_file = sock_file
         self.mode = "line-repr-eval"  # default mode
@@ -36,8 +36,9 @@ class APIChannel(object):
             return None
         if self.mode == "line-repr-eval":
             return eval(self.sock_file.readline().decode("UTF-8"))
-        elif self.mode == "pickle4":
+        if self.mode == "pickle4":
             return pickle.load(self.sock_file)
+        return None
 
     def fileno(self):
         return self.sock_file.fileno()
@@ -48,7 +49,7 @@ class APIChannel(object):
     def set_mode(self, mode):
         if mode in ("pickle4", "line-repr-eval"):
             if isinstance(self.sock_file, RWSocketFile):
-                pickle_mode = (mode=="pickle4")
+                pickle_mode = mode == "pickle4"
                 self.sock_file.pickle_mode = pickle_mode
             self.mode = mode
         else:
@@ -93,7 +94,7 @@ def AttrCallAggregator(handler, path="", p_args=()):
             return _AttrCallAggregator(f"{self._path}.{attr}")
 
         def __getitem__(self, idx):
-            return _AttrCallAggregator(f"{self._path}[{repr(idx)}]")
+            return _AttrCallAggregator(f"{self._path}[{idx!r}]")
 
         def __call__(self, *args, **kwargs):
             all_args = p_args + (self._path[1:], args, kwargs)
@@ -102,7 +103,7 @@ def AttrCallAggregator(handler, path="", p_args=()):
     return _AttrCallAggregator(path)
 
 
-class AttrCallRunner(object):
+class AttrCallRunner:
     def __init__(self, handler):
         self.handler = handler
 
@@ -132,7 +133,7 @@ class LinkException(Exception):
 
 
 @reusable
-class ServerAPIConnection(object):
+class ServerAPIConnection:
     def __init__(self, server_ip, local_service, target_api, busy_indicator):
         if local_service is None:
             local_service = BaseAPIService()
@@ -177,7 +178,7 @@ class ServerAPIConnection(object):
                 # if the server hostname (or ip) contains only ASCII chars
                 # we can prevent the socket.create_connection() function
                 # from loading the IDNA encoding module and save a few milliseconds.
-                server_ip = self.server_ip.encode('ascii')
+                server_ip = self.server_ip.encode("ascii")
                 self.sock = self.create_connection(server_ip)
             except Exception:
                 self.sock = self.create_connection(self.server_ip)
@@ -192,14 +193,13 @@ class ServerAPIConnection(object):
             # pickle4 is a faster mode for large transfers because line-repr-eval
             # uses readline() on the receiving side, which means reading chars one
             # by one up to the end of line.
-            self.api_channel.write("SET_MODE", 'pickle4')  # set mode remotely
-            self.api_channel.set_mode('pickle4')           # set mode locally
+            self.api_channel.write("SET_MODE", "pickle4")  # set mode remotely
+            self.api_channel.set_mode("pickle4")  # set mode locally
             self.connected = True
 
     def create_connection(self, server_ip):
         return create_connection(
-                (server_ip, WALT_SERVER_DAEMON_PORT),
-                SERVER_SOCKET_TIMEOUT
+            (server_ip, WALT_SERVER_DAEMON_PORT), SERVER_SOCKET_TIMEOUT
         )
 
     def disconnect(self):
@@ -234,9 +234,8 @@ class ServerAPIConnection(object):
         if hasattr(self, path):
             # this is something implemented locally
             return getattr(self, path)(*args, **kwargs)
-        else:
-            # this is a remote api call
-            return self.do_remote_api_call(path, args, kwargs)
+        # this is a remote api call
+        return self.do_remote_api_call(path, args, kwargs)
 
     def do_remote_api_call(self, path, args, kwargs):
         # send the api call
@@ -250,6 +249,7 @@ class ServerAPIConnection(object):
 
     def wait_api_result(self):
         from select import select
+
         self.indicator.start()
         api_result = None
         while True:
@@ -273,7 +273,7 @@ class ServerAPIConnection(object):
                 if event[0] == "API_CALL":
                     self.handle_api_call(*event[1:])
                     continue
-                elif event[0] == "EXCEPTION":
+                if event[0] == "EXCEPTION":
                     sys.exit("Unexpected server-side issue! %s" % event[1])
                 elif event[0] == "RESULT":
                     api_result = event[1]
@@ -291,7 +291,7 @@ class ServerAPIConnection(object):
 
 
 @api
-class BaseAPIService(object):
+class BaseAPIService:
     def __init__(self):
         self.client_type = "cli"
 
@@ -310,7 +310,7 @@ class BaseAPIService(object):
 
 # This class provides a 'with' environment to connect to
 # the server API.
-class ServerAPILink(object):
+class ServerAPILink:
     def __init__(self, server_ip, target_api, local_service=None, busy_indicator=None):
         self.conn = ServerAPIConnection(
             server_ip, local_service, target_api, busy_indicator

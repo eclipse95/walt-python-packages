@@ -3,7 +3,9 @@ from __future__ import annotations
 import os
 import sys
 from fcntl import F_GETFD, F_GETFL, F_SETFD, F_SETFL, FD_CLOEXEC, fcntl
-from functools import lru_cache   # note: python3.7 has no functools.cache decorator
+from functools import (  # note: python3.7 has no functools.cache decorator
+    cache,
+)
 from pathlib import Path
 
 
@@ -73,9 +75,8 @@ def failsafe_symlink(src_target, dst_path, force_relative=False):
         if os.readlink(dst_path) == src_target:
             # nothing to do
             return
-        else:
-            # symlink target (src_target) has changed
-            os.remove(dst_path)
+        # symlink target (src_target) has changed
+        os.remove(dst_path)
     # ensure parent dir of dst_path exists
     failsafe_makedirs(os.path.dirname(dst_path))
     # create the symlink
@@ -92,7 +93,7 @@ def failsafe_symlink(src_target, dst_path, force_relative=False):
 # the with construct.
 
 
-class AutoCleaner(object):
+class AutoCleaner:
     def __init__(self, obj):
         self.obj = obj
 
@@ -119,7 +120,7 @@ def get_kernel_bootarg(in_bootarg):
 
 
 class RealBusyIndicator:
-    @lru_cache(maxsize=None)
+    @cache
     def __new__(cls, label):
         return object.__new__(cls)
 
@@ -164,7 +165,7 @@ class RealBusyIndicator:
 
 
 class SilentBusyIndicator:
-    @lru_cache(maxsize=None)
+    @cache
     def __new__(cls):
         return object.__new__(cls)
 
@@ -179,8 +180,7 @@ class BusyIndicator:
         )
         if is_interactive:
             return RealBusyIndicator(*args)
-        else:
-            return SilentBusyIndicator()
+        return SilentBusyIndicator()
 
 
 def fd_copy(fd_src, fd_dst, size):
@@ -220,7 +220,7 @@ def on_sigterm_throw_exception():
     signal.signal(signal.SIGTERM, signal_handler)
 
 
-class SimpleContainer(object):
+class SimpleContainer:
     def __init__(self, **args):
         self.update(**args)
 
@@ -269,24 +269,23 @@ def get_persistent_random_mac(mac_file):
     mac_file_path = Path(mac_file)
     if mac_file_path.exists():
         return mac_file_path.read_text().strip()
-    else:
-        import random
+    import random
 
-        mac = ":".join(
-            [
-                "%02x" % x
-                for x in [
-                    0x52,
-                    0x54,
-                    0x00,
-                    random.randint(0x00, 0x7F),
-                    random.randint(0x00, 0xFF),
-                    random.randint(0x00, 0xFF),
-                ]
+    mac = ":".join(
+        [
+            "%02x" % x
+            for x in [
+                0x52,
+                0x54,
+                0x00,
+                random.randint(0x00, 0x7F),
+                random.randint(0x00, 0xFF),
+                random.randint(0x00, 0xFF),
             ]
-        )
-        mac_file_path.write_text(mac + "\n")
-        return mac
+        ]
+    )
+    mac_file_path.write_text(mac + "\n")
+    return mac
 
 
 def parse_image_fullname(image_fullname):

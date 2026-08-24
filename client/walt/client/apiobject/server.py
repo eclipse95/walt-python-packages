@@ -3,7 +3,7 @@ from walt.client.apitools import silent_server_link
 
 
 class APIServer(APIObjectBase):
-    "walt server"
+    """walt server"""
 
     def __init__(self):
         super().__init__()

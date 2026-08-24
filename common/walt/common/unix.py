@@ -4,8 +4,8 @@ import socket
 from pathlib import Path
 
 from walt.common.service import GenericServer, ServiceRequests
-from walt.common.tools import set_close_on_exec
 from walt.common.tcp import MyPickle as pickle
+from walt.common.tools import set_close_on_exec
 
 
 def send_msg_fds(sock, msg, fds, peer_addr):
@@ -35,10 +35,10 @@ def bind_to_random_sockname(s):
 
 
 class Requests(ServiceRequests):
-    REQ_FAKE_TFTP_GET_FD    = 0
-    REQ_VPN_ENROLL          = 1
-    REQ_GENERATE_FILE       = 2
-    REQ_PROPERTY            = 3
+    REQ_FAKE_TFTP_GET_FD = 0
+    REQ_VPN_ENROLL = 1
+    REQ_GENERATE_FILE = 2
+    REQ_PROPERTY = 3
 
 
 # since we are on a UNIX socket, we know the client is on the same

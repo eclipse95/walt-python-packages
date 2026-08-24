@@ -6,11 +6,12 @@ import signal
 import sys
 
 from walt.common.io import read_and_copy
-from walt.common.tcp import read_pickle, MyPickle as pickle
+from walt.common.tcp import MyPickle as pickle
+from walt.common.tcp import read_pickle
 from walt.common.tty import set_tty_size, set_tty_size_raw
 
 
-class ForkPtyProcessListener(object):
+class ForkPtyProcessListener:
     def __init__(self, slave_pid, env):
         self.slave_pid = slave_pid
         self.env = env
@@ -36,7 +37,7 @@ class ForkPtyProcessListener(object):
         self.env.close()
 
 
-class ParallelProcessSocketListener(object):
+class ParallelProcessSocketListener:
     def __init__(self, ev_loop, sock_file, **kwargs):
         self.ev_loop = ev_loop
         self.params = None
@@ -64,8 +65,7 @@ class ParallelProcessSocketListener(object):
             env.update(self.params["env"])
         if "tty_mode" in self.params and self.params["tty_mode"] is True:
             return self.start_pty(cmd_args, env)
-        else:
-            return self.start_popen(cmd_args, env)
+        return self.start_popen(cmd_args, env)
 
     def start_pty(self, cmd_args, env):
         # print(f'{self.client_sock_file.fileno()}: start_pty {cmd_args}')
@@ -130,20 +130,19 @@ class ParallelProcessSocketListener(object):
                 self.params["cmd"] = self.get_command(**self.params)
                 # we now have all info to start the child process
                 return self.start()
-            else:
-                # otherwise we are all set. Getting here means
-                # we got input data or the child process ended.
-                # the fact we are still alive and listening implies
-                # we are in the tty mode.
-                # in this mode input data and window resize events are
-                # multiplexed on the socket.
-                evt_info = pickle.load(self.client_sock_file)
-                if evt_info["evt"] == "input_data":
-                    self.slave_w.write(evt_info["data"])
-                    self.slave_w.flush()
-                elif evt_info["evt"] == "window_resize":
-                    win_size = (evt_info["lines"], evt_info["columns"])
-                    set_tty_size(self.slave_w.fileno(), win_size)
+            # otherwise we are all set. Getting here means
+            # we got input data or the child process ended.
+            # the fact we are still alive and listening implies
+            # we are in the tty mode.
+            # in this mode input data and window resize events are
+            # multiplexed on the socket.
+            evt_info = pickle.load(self.client_sock_file)
+            if evt_info["evt"] == "input_data":
+                self.slave_w.write(evt_info["data"])
+                self.slave_w.flush()
+            elif evt_info["evt"] == "window_resize":
+                win_size = (evt_info["lines"], evt_info["columns"])
+                set_tty_size(self.slave_w.fileno(), win_size)
         except Exception as e:
             print(self, "exception:", repr(e))
             return False  # issue, this will call self.close()

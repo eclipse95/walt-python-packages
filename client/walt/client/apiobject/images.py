@@ -55,13 +55,9 @@ __info_cache__ = APIImageInfoCache()
 class APIImageBase:
     """Base class of all APIImage classes, for use in isinstance()"""
 
-    pass
-
 
 class APISetOfImagesBase:
     """Base class of all APISetOfImages classes, for use in isinstance()"""
-
-    pass
 
 
 class APIImageFactory:
@@ -115,8 +111,6 @@ class APISetOfImagesFactory:
         class APISetOfImages(item_set_cls, APISetOfImagesBase):
             """Set of WalT images"""
 
-            pass
-
         return APISetOfImages()
 
 
@@ -137,7 +131,7 @@ class APIImagesSubModule(APIObjectBase):
                     "Failed: parameter dir_or_url must be a directory or a git"
                     " repository URL.\n"
                 )
-                return
+                return None
             info["src_dir"] = str(dir_or_url)
         else:
             info["url"] = dir_or_url
@@ -147,29 +141,28 @@ class APIImagesSubModule(APIObjectBase):
                     "Failed: parameter sub_dir is only supported when using"
                     " a repository URL.\n"
                 )
-                return
+                return None
             info["subdir"] = sub_dir.strip("/")
         with silent_server_link() as server:
             info = server.create_image_build_session(**info)
             if info is None:
-                return  # issue already reported
+                return None  # issue already reported
             image_overwrite = info.pop("image_overwrite")
             if image_overwrite:
                 sys.stderr.write("Failed: An image with this name already exists.\n")
-                return
+                return None
             session_id = info.pop("session_id")
             if mode == "dir":
                 try:
                     if not run_transfer_for_image_build(**info):
-                        return
+                        return None
                 except (KeyboardInterrupt, EOFError):
                     print()
                     print("Aborted.")
-                    return
-            else:
-                if not server.run_image_build_from_url(session_id):
-                    # failed
-                    return
+                    return None
+            elif not server.run_image_build_from_url(session_id):
+                # failed
+                return None
             server.finalize_image_build_session(session_id)
         __info_cache__.refresh()  # detect the new image
         return APIImageFactory.create(image_name)
@@ -185,8 +178,7 @@ class APIImagesSubModule(APIObjectBase):
                 image_name = res["image_name"]
                 print("The image was cloned successfully.")
                 return APIImageFactory.create(image_name)
-            else:
-                return  # issue
+            return None  # issue
 
 
 class APIClonableImage(APIObjectBase):
@@ -221,10 +213,9 @@ def get_image_object_from_fullname(image_fullname):
     if image_user == "waltplatform" and image_name.endswith("-default"):
         model = image_fullname[len("waltplatform/") : -len("-default:latest")]
         return APIDefaultImage(model)
-    elif image_user != conf.walt.username:
+    if image_user != conf.walt.username:
         return APIOtherUserImage(image_fullname)
-    else:
-        return APIImageFactory.create(image_name)
+    return APIImageFactory.create(image_name)
 
 
 def get_image_from_name(image_name):

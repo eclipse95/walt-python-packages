@@ -4,7 +4,8 @@ import tarfile
 
 from walt.client.link import connect_to_tcp_server
 from walt.client.progress import ProgressMessageProcess
-from walt.common.tcp import Requests, write_pickle, MyPickle as pickle
+from walt.common.tcp import MyPickle as pickle
+from walt.common.tcp import Requests, write_pickle
 
 
 def run_transfer_with_image(client_operand_index, **kwargs):
@@ -60,8 +61,7 @@ class DefaultMessageReader:
         chunk = sock_file.read(4096)
         if len(chunk) == 0:
             return None
-        else:
-            return chunk.decode("utf-8")
+        return chunk.decode("utf-8")
 
 
 class PickleMessageReader:
@@ -76,7 +76,8 @@ class PickleMessageReader:
 class SmartWriter:
     """SmartWriter class allows to write data on a socket while
     still keeping track of any data (typically error message)
-    sent the other way."""
+    sent the other way.
+    """
 
     def __init__(self, sock_file, message_thread, read_message, on_message):
         self.sock_file = sock_file
@@ -95,11 +96,10 @@ class SmartWriter:
             if msg is None:
                 self.ended = True
                 return  # ended
-            else:
-                if self.on_message(self.message_thread, msg) is False:
-                    self.status_ok = False
-                    break
-                continue
+            if self.on_message(self.message_thread, msg) is False:
+                self.status_ok = False
+                break
+            continue
 
     def write(self, s):
         # poll for readable data
@@ -184,11 +184,10 @@ def run_transfer(
                 # ok done
                 writer.close()
                 return writer.get_status()
-            else:
-                # client is receiving
-                with tarfile.open(mode="r|", fileobj=f) as archive:
-                    archive.extractall(path=params["dst_dir"])
-                return True
+            # client is receiving
+            with tarfile.open(mode="r|", fileobj=f) as archive:
+                archive.extractall(path=params["dst_dir"])
+            return True
     except OSError as e:
         print(e)
         return False

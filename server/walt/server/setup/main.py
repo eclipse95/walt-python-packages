@@ -1,10 +1,11 @@
 import shlex
 import subprocess
 import sys
+from importlib.resources import files
 from pathlib import Path
 
-from importlib.resources import files
 from plumbum import cli
+
 from walt.common import systemd
 from walt.common.setup import WaltGenericSetup
 from walt.common.tools import verify_root_login_shell
@@ -20,8 +21,8 @@ from walt.server.setup.ossetup import (
     get_os_codename,
     install_os,
     install_os_on_image,
-    record_start_os_upgrade,
     record_end_os_upgrade,
+    record_start_os_upgrade,
     upgrade_os,
 )
 from walt.server.setup.vpn import setup_vpn
@@ -72,9 +73,11 @@ UNCOMPATIBLE_OS_SERVICES = [
     "ptpd.service",
 ]
 
-WALT_SOCKET_SERVICES = ["walt-server-podman.socket",
-                        "walt-server-nbd.socket",
-                        "walt-server-vpn.socket"]
+WALT_SOCKET_SERVICES = [
+    "walt-server-podman.socket",
+    "walt-server-nbd.socket",
+    "walt-server-vpn.socket",
+]
 WALT_MAIN_SERVICE = "walt-server.service"
 
 # Notes:
@@ -165,14 +168,14 @@ WALT_BASH_COMPLETION_PATH = Path("/etc/bash_completion.d/walt")
 WALT_ZSH_COMPLETION_PATH = Path("/usr/local/share/zsh/site-functions/_walt")
 
 APPARMOR_CONFS = {
-        "usr.sbin.dhcpd": """
+    "usr.sbin.dhcpd": """
 /var/lib/walt/services/dhcpd/*.conf r,
 /var/lib/walt/services/dhcpd/*.leases* lrw,
 /run/walt/dhcpd/dhcpd.pid rw,
 /root/walt-*/.venv/bin/walt-dhcp-event ux,  # developer setups
 /opt/walt-*/bin/walt-dhcp-event ux,         # prod setups
 """,
-        "usr.sbin.named": """
+    "usr.sbin.named": """
 /var/lib/walt/services/named/*.conf r,
 /var/lib/walt/services/named/*.zone r,
 /var/lib/walt/services/named/tmp* rw,
@@ -197,6 +200,7 @@ class WalTServerSetup(WaltGenericSetup):
     @property
     def package(self):
         import walt.server.setup
+
         return files(walt.server.setup)
 
     @property
@@ -329,8 +333,9 @@ class WalTServerSetup(WaltGenericSetup):
             if not p.exists() or p.read_text() != apparmor_conf:
                 p.write_text(apparmor_conf)
                 # reload the profile
-                subprocess.run(shlex.split(
-                    f"apparmor_parser -r /etc/apparmor.d/{apparmor_file}"))
+                subprocess.run(
+                    shlex.split(f"apparmor_parser -r /etc/apparmor.d/{apparmor_file}")
+                )
 
     def cleanup_old_walt_install(self):
         cleanup_old_walt_install()
@@ -351,8 +356,10 @@ class WalTServerSetup(WaltGenericSetup):
     def update_completion(self):
         print("Updating bash & zsh completion for walt tool... ", end="")
         sys.stdout.flush()
-        for shell, path in (("bash", WALT_BASH_COMPLETION_PATH),
-                            ("zsh", WALT_ZSH_COMPLETION_PATH)):
+        for shell, path in (
+            ("bash", WALT_BASH_COMPLETION_PATH),
+            ("zsh", WALT_ZSH_COMPLETION_PATH),
+        ):
             p = subprocess.run(
                 f"walt advanced dump-{shell}-autocomplete".split(),
                 check=True,

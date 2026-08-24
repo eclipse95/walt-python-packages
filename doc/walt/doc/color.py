@@ -88,8 +88,7 @@ def get_transition_esc_sequence(old_format, new_format):
     # build the escape sequence
     if len(codes) == 0:
         return ""
-    else:
-        return "\x1b[" + ";".join(codes) + "m"
+    return "\x1b[" + ";".join(codes) + "m"
 
 
 def optimize_and_reset_default_colors(s, default_fg, default_bg):
@@ -102,9 +101,21 @@ def optimize_and_reset_default_colors(s, default_fg, default_bg):
     start = 0
     end = 0
     bg, fg, bold, dim, italic, underline = (
-            BG_COLOR_DEFAULT, FG_COLOR_DEFAULT, False, False, False, False)
+        BG_COLOR_DEFAULT,
+        FG_COLOR_DEFAULT,
+        False,
+        False,
+        False,
+        False,
+    )
     target_bg, target_fg, target_bold, target_dim, target_italic, target_underline = (
-            default_bg, default_fg, False, False, False, False)
+        default_bg,
+        default_fg,
+        False,
+        False,
+        False,
+        False,
+    )
     # We use itertools.chain to append a None at the end of the
     # iteration. We will use it to detect the end and flush
     # remaining escape codes.
@@ -149,10 +160,10 @@ def optimize_and_reset_default_colors(s, default_fg, default_bg):
             diff_codes.append("4" if target_underline else "24")
             underline = target_underline
         if update_foreground and (target_bold, target_dim) != (bold, dim):
-            if (
-                    (bold, target_bold) == (True, False) or
-                    (dim, target_dim) == (True, False)
-               ):
+            if (bold, target_bold) == (True, False) or (dim, target_dim) == (
+                True,
+                False,
+            ):
                 # we have to turn off at least one of bold or dim
                 # we use code 22 (most compatible), which turns both off
                 diff_codes.append("22")
@@ -185,7 +196,11 @@ def optimize_and_reset_default_colors(s, default_fg, default_bg):
                         target_bg = default_bg
                         target_fg = default_fg
                         target_bold, target_dim, target_italic, target_underline = (
-                                False, False, False, False)
+                            False,
+                            False,
+                            False,
+                            False,
+                        )
                     elif (c >= 30 and c <= 37) or (c >= 90 and c <= 97):
                         target_fg = codes[0]
                     elif (c >= 40 and c <= 47) or (c >= 100 and c <= 107):
@@ -198,7 +213,7 @@ def optimize_and_reset_default_colors(s, default_fg, default_bg):
                         target_bold = True
                     elif c == 2:
                         target_dim = True
-                    elif c == 22:   # dim and bold off
+                    elif c == 22:  # dim and bold off
                         target_bold = False
                         target_dim = False
                     elif c == 3:

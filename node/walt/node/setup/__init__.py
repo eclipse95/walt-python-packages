@@ -1,6 +1,7 @@
 import sys
-from pathlib import Path
 from importlib.resources import files
+from pathlib import Path
+
 from walt.common.setup import WaltGenericSetup
 
 
@@ -9,6 +10,7 @@ class WaltNodeSetup(WaltGenericSetup):
     @property
     def package(self):
         import walt.node.setup
+
         return files(walt.node.setup)
 
     @property
@@ -23,6 +25,6 @@ class WaltNodeSetup(WaltGenericSetup):
 
 def run():
     assert (
-            Path(sys.prefix) / "bin" / "activate"
-        ).exists(), "walt-node seems not installed in a virtual environment"
+        Path(sys.prefix) / "bin" / "activate"
+    ).exists(), "walt-node seems not installed in a virtual environment"
     WaltNodeSetup.run()

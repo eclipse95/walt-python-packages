@@ -1,25 +1,26 @@
-import numpy as np
 import sys
 from collections import defaultdict
 from datetime import datetime
-from numpy.lib.recfunctions import rec_join as np_rec_join
 from time import time
+
+import numpy as np
+from numpy.lib.recfunctions import rec_join as np_rec_join
 
 from walt.common.constants import WALT_SERVER_NETCONSOLE_PORT
 from walt.common.tcp import Requests, read_pickle, write_pickle
 from walt.common.udp import udp_server_socket
+from walt.server.processes.main.workflow import Workflow
 from walt.server.regex import PosixExtendedRegex
 from walt.server.tools import get_server_ip, np_recarray_to_tuple_of_dicts
-from walt.server.processes.main.workflow import Workflow
 
 TEN_YEARS = 3600 * 24 * 365 * 10
-LOG_DT = [("timestamp", np.float64),
-          ("line", object),
-          ("stream_id", np.int32)]
-CLIENT_LOG_DT = [("timestamp", object),
-                 ("line", object),
-                 ("issuer", object),
-                 ("stream", object)]
+LOG_DT = [("timestamp", np.float64), ("line", object), ("stream_id", np.int32)]
+CLIENT_LOG_DT = [
+    ("timestamp", object),
+    ("line", object),
+    ("issuer", object),
+    ("stream", object),
+]
 LOG_PENDING_SIZE = 512
 DB_LOGS_BLOCK_SIZE = 128
 
@@ -27,14 +28,14 @@ DB_LOGS_BLOCK_SIZE = 128
 class LogsBuffer:
     def __init__(self, init_size):
         self._buffer = np.empty(init_size, LOG_DT)
-        self.size = 0   # public attr for performance
+        self.size = 0  # public attr for performance
 
     def append(self, logs):
         new_size = self.size + logs.size
         if new_size > self._buffer.size:
-            self._buffer = np.append(self._buffer[:self.size], logs)
+            self._buffer = np.append(self._buffer[: self.size], logs)
         else:
-            self._buffer[self.size:new_size] = logs
+            self._buffer[self.size : new_size] = logs
         self.size = new_size
 
     def pop(self):
@@ -43,7 +44,7 @@ class LogsBuffer:
         return self._buffer[:size].view(np.recarray)
 
 
-class LogsToDBHandler(object):
+class LogsToDBHandler:
     # Logs cause many inserts in db, so we buffer
     # them during a limited time and then possibly
     # insert many of them at once.
@@ -52,7 +53,7 @@ class LogsToDBHandler(object):
     def __init__(self, ev_loop, db):
         self.ev_loop = ev_loop
         self.db = db
-        self.pending_records = LogsBuffer(2*LOG_PENDING_SIZE)
+        self.pending_records = LogsBuffer(2 * LOG_PENDING_SIZE)
 
     def log(self, logs):
         self.pending_records.append(logs)
@@ -71,7 +72,7 @@ class LogsToDBHandler(object):
             self.db.do_async.insert_multiple_logs(self.pending_records.pop())
 
 
-class LogsHub(object):
+class LogsHub:
     def __init__(self):
         self.handlers = set([])
 
@@ -81,8 +82,15 @@ class LogsHub(object):
     def removeHandler(self, handler):
         self.handlers.remove(handler)
 
-    def log(self, stream_id, line=None, lines=None,
-            timestamp=None, timestamps=None, secondary_file=None):
+    def log(
+        self,
+        stream_id,
+        line=None,
+        lines=None,
+        timestamp=None,
+        timestamps=None,
+        secondary_file=None,
+    ):
         if lines is None:
             assert line is not None
             lines = np.array([line])
@@ -105,7 +113,7 @@ class LogsHub(object):
                 self.handlers.remove(handler)
 
 
-class LogsStreamListener(object):
+class LogsStreamListener:
     def __init__(self, manager, sock_file, **kwargs):
         self.manager = manager
         self.hub = manager.hub
@@ -145,7 +153,7 @@ class LogsStreamListener(object):
                 new_chunk = b"<disconnected!>\nCLOSE\n"
             self.chunk += new_chunk.decode("UTF-8")
             inputlines = np.array(self.chunk.split("\n"))
-            if (inputlines[-2:] == ('CLOSE', '')).all():
+            if (inputlines[-2:] == ("CLOSE", "")).all():
                 should_continue = False
                 inputlines = inputlines[:-2]
             else:
@@ -156,7 +164,7 @@ class LogsStreamListener(object):
                     self.hub.log(self.stream_id, lines=inputlines, timestamp=ts)
                 else:
                     partition = np.char.partition(inputlines, " ")
-                    timestamps, lines = partition[:,0].astype(float), partition[:,2]
+                    timestamps, lines = partition[:, 0].astype(float), partition[:, 2]
                     # detect wrong timestamps, replace with ts
                     mask = (timestamps < ts - TEN_YEARS) | (timestamps > ts + 1)
                     timestamps[mask] = ts
@@ -191,18 +199,17 @@ class FileListener:
                 return False
         except Exception:
             return False
-        self.hub.log(
-            timestamp=ts, line=repr(chunk), stream_id=self.stream_id
-        )
+        self.hub.log(timestamp=ts, line=repr(chunk), stream_id=self.stream_id)
         return True
 
     def close(self):
         self.file.close()
 
 
-class NetconsoleListener(object):
+class NetconsoleListener:
     """Listens for netconsole messages sent by nodes over UDP, and store
-    them as regular logs."""
+    them as regular logs.
+    """
 
     def __init__(self, manager, port, **kwargs):
         self.manager = manager
@@ -221,7 +228,7 @@ class NetconsoleListener(object):
     def handle_event(self, ts):
         # TODO: we should decode the extended format and handle continuation messages.
         # https://www.kernel.org/doc/Documentation/ABI/testing/dev-kmsg
-        (msg, addrinfo) = self.s.recvfrom(9000)
+        msg, addrinfo = self.s.recvfrom(9000)
         issuer_ip, issuer_port = addrinfo
         if issuer_ip not in self.issuer_info:
             # Cache IP -> stream ID association, to avoid hitting the
@@ -257,7 +264,7 @@ PHASE_RETRIEVING_FROM_DB = 0
 PHASE_SENDING_TO_CLIENT = 1
 
 
-class LogsToSocketHandler(object):
+class LogsToSocketHandler:
     def __init__(self, manager, sock_file, **kwargs):
         self.manager = manager
         self.sock_file = sock_file
@@ -295,16 +302,19 @@ class LogsToSocketHandler(object):
         if self.logline_re_match is not None:
             mask_lines = self.logline_re_match(logs.line)
             if not mask_lines.any():
-                return  # all logs filtered out
+                return None  # all logs filtered out
             logs = logs[mask_lines]
         # analyse the streams found in those logs:
         # get issuer and stream name from cache, or from db if missing
         stream_ids, rev = np.unique(logs.stream_id, return_inverse=True)
-        stream_info = np_rec_join("stream_id",
-                                  stream_ids.astype([("stream_id", "O")]),
-                                  self.cache, jointype="leftouter",
-                                  defaults={"issuer": None, "stream": None})
-        mask_cache_miss = (stream_info.issuer is None)
+        stream_info = np_rec_join(
+            "stream_id",
+            stream_ids.astype([("stream_id", "O")]),
+            self.cache,
+            jointype="leftouter",
+            defaults={"issuer": None, "stream": None},
+        )
+        mask_cache_miss = stream_info.issuer is None
         if mask_cache_miss.any():
             # some stream info is missing from cache, query db
             db_stream_ids = stream_info[mask_cache_miss].stream_id
@@ -323,14 +333,14 @@ class LogsToSocketHandler(object):
             if streams_filtering:
                 mask_streams &= self.streams_re_match(stream_info.stream)
                 if not mask_streams.any():
-                    return  # all logs filtered out
+                    return None  # all logs filtered out
             # when data comes from the db, issuers are already filtered,
             # while data coming from the hub has to be filtered.
             if issuers_filtering:
                 mask_streams &= np.isin(stream_info.issuer, self.issuers)
                 # filter out wrong issuers
                 if not mask_streams.any():
-                    return  # all logs filtered out
+                    return None  # all logs filtered out
             # filter data according to mask_streams
             if not mask_streams.all():
                 mask_logs = mask_streams[rev]
@@ -353,17 +363,16 @@ class LogsToSocketHandler(object):
     def format_timestamps(self, timestamps):
         if self.timestamps_format == "datetime":
             return self.np_datetime_from_ts(timestamps)
-        elif self.timestamps_format == "float-s":
+        if self.timestamps_format == "float-s":
             return timestamps
-        elif self.timestamps_format == "float-ms":
+        if self.timestamps_format == "float-ms":
             return timestamps * 1000
-        else:
-            raise NotImplementedError('Unexpected "timestamps_format" value.')
+        raise NotImplementedError('Unexpected "timestamps_format" value.')
 
     def send_logs_to_client(self, client_logs):
         try:
             if self.sock_file.closed:
-                raise IOError()
+                raise OSError
             if self.output_format == "dict-pickles":
                 tuple_of_dicts = np_recarray_to_tuple_of_dicts(client_logs)
                 for d in tuple_of_dicts:
@@ -372,7 +381,7 @@ class LogsToSocketHandler(object):
                 write_pickle(client_logs, self.sock_file)
             else:
                 raise NotImplementedError('Unexpected "output_format" value.')
-        except IOError:
+        except OSError:
             # the socket was supposedly closed.
             print("client log connection closing")
             # notify the hub that we should be removed.
@@ -383,9 +392,16 @@ class LogsToSocketHandler(object):
         return self.sock_file.fileno()
 
     # this is what we will do depending on the client request params
-    def handle_params(self, history, realtime,
-                      issuers=None, streams_regexp=None, logline_regexp=None,
-                      timestamps_format="datetime", output_format="dict-pickles"):
+    def handle_params(
+        self,
+        history,
+        realtime,
+        issuers=None,
+        streams_regexp=None,
+        logline_regexp=None,
+        timestamps_format="datetime",
+        output_format="dict-pickles",
+    ):
         if streams_regexp:
             regex = PosixExtendedRegex(streams_regexp)
             self.streams_re_match = np.vectorize(regex.match)
@@ -403,10 +419,12 @@ class LogsToSocketHandler(object):
         self.realtime = realtime
         self.timestamps_format = timestamps_format
         self.output_format = output_format
-        self.db_params = dict(history=history,
-                              issuers=issuers,
-                              streams_regexp=streams_regexp,
-                              logline_regexp=logline_regexp)
+        self.db_params = dict(
+            history=history,
+            issuers=issuers,
+            streams_regexp=streams_regexp,
+            logline_regexp=logline_regexp,
+        )
         if realtime:
             self.hub.addHandler(self)
         if history:
@@ -420,7 +438,7 @@ class LogsToSocketHandler(object):
         async_db.create_server_logs_cursor(**params).then(wf.next)
 
     def _wf_save_cursor_name(self, wf, cursor_name, **env):
-        wf.update_env(cursor_name = cursor_name)
+        wf.update_env(cursor_name=cursor_name)
         wf.next()
 
     def _wf_step_server_cursor(self, wf, cursor_name, **env):
@@ -433,17 +451,12 @@ class LogsToSocketHandler(object):
         # when the client disconnects.
         if rows.size > 0:
             res = self.write_db_logs_to_client(rows)
-            should_continue = (
-                    (res is not False) and
-                    (rows.size == DB_LOGS_BLOCK_SIZE))
+            should_continue = (res is not False) and (rows.size == DB_LOGS_BLOCK_SIZE)
         else:
             should_continue = False
         if should_continue:
             # we will continue with next block
-            wf.insert_steps([
-                    self._wf_step_server_cursor,
-                    self._wf_process_logs_block
-            ])
+            wf.insert_steps([self._wf_step_server_cursor, self._wf_process_logs_block])
         wf.next()
 
     def _wf_delete_server_cursor(self, wf, cursor_name, **env):
@@ -468,12 +481,14 @@ class LogsToSocketHandler(object):
         # ensure all past logs are commited
         self.manager.logs_to_db.flush()
         # for retrieving db logs asynchronously, we use a workflow object
-        steps = [self._wf_create_server_logs_cursor,
-                 self._wf_save_cursor_name,
-                 self._wf_step_server_cursor,
-                 self._wf_process_logs_block,
-                 self._wf_delete_server_cursor,
-                 self._wf_end_db_logs]
+        steps = [
+            self._wf_create_server_logs_cursor,
+            self._wf_save_cursor_name,
+            self._wf_step_server_cursor,
+            self._wf_process_logs_block,
+            self._wf_delete_server_cursor,
+            self._wf_end_db_logs,
+        ]
         wf = Workflow(steps)
         wf.run()
 
@@ -514,7 +529,7 @@ class LoggerFile:
             self.buffer = parts[-1]
             lines = np.array(parts[:-1])
             # exclude lines tagged __DEBUG__
-            mask = (np.char.find(lines, "__DEBUG__") == -1)
+            mask = np.char.find(lines, "__DEBUG__") == -1
             if mask.any():
                 self.logs_manager.server_log(self.stream_name, lines=lines[mask])
         self._flushing = False
@@ -530,7 +545,7 @@ class LoggerFile:
         return self.secondary_file.encoding
 
 
-class LogsManager(object):
+class LogsManager:
     def __init__(self, db, tcp_server, ev_loop):
         self.ev_loop = ev_loop
         self.db = db
@@ -596,7 +611,9 @@ class LogsManager(object):
                WHERE s.id = ANY(%s)
                  AND s.issuer_mac = d.mac
                ORDER BY s.id
-            """, (list(stream_ids),))
+            """,
+            (list(stream_ids),),
+        )
 
     def platform_log(self, stream_name, error=False, **kwargs):
         # print at stdout / stderr too
@@ -634,18 +651,16 @@ class LogsManager(object):
                     "Failed: no checkpoint with this name '%s'.\n" % cp_name
                 )
                 return (False,)
-            else:
-                # datetime to float conversion
-                cp_info.timestamp = cp_info.timestamp.timestamp()
-                return (True, cp_info)
+            # datetime to float conversion
+            cp_info.timestamp = cp_info.timestamp.timestamp()
+            return (True, cp_info)
         if not expected:
             if cp_info is None:
                 return (True,)  # ok
-            else:
-                requester.stderr.write(
-                    "Failed: a checkpoint with this name already exists.\n"
-                )
-                return (False,)
+            requester.stderr.write(
+                "Failed: a checkpoint with this name already exists.\n"
+            )
+            return (False,)
 
     def add_checkpoint(self, requester, cp_name, date):
         # expect no existing checkpoint with the same name
@@ -676,7 +691,7 @@ class LogsManager(object):
     def list_checkpoints(self, requester):
         username = requester.get_username()
         if not username:
-            return None  # client already disconnected, give up
+            return  # client already disconnected, give up
         res = self.db.select("checkpoints", username=username)
         if len(res) == 0:
             requester.stdout.write("You own no checkpoints.\n")
@@ -696,6 +711,6 @@ class LogsManager(object):
     def get_checkpoint_time(self, requester, cp_name):
         res = self.get_checkpoint(requester, cp_name, expected=True)
         if not res[0]:
-            return
+            return None
         cp_info = res[1]
         return cp_info.timestamp

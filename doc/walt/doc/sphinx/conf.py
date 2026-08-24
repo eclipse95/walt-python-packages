@@ -11,7 +11,6 @@ import re
 from pathlib import Path
 
 import pypandoc
-import sphinx_rtd_theme
 
 THIS_DIR = Path(__file__).parent
 print(THIS_DIR)

@@ -6,12 +6,11 @@ def yes_or_no(msg, okmsg="OK.\n", komsg="OK.\n"):
             if okmsg:
                 print(okmsg)
             return True
-        elif res == "n":
+        if res == "n":
             if komsg:
                 print(komsg)
             return False
-        else:
-            print("Invalid response.")
+        print("Invalid response.")
 
 
 def choose(msg="possible values:", **args):
@@ -24,8 +23,7 @@ def choose(msg="possible values:", **args):
         res = input()
         if res in args:
             return res
-        else:
-            print("Invalid response.\n")
+        print("Invalid response.\n")
 
 
 def confirm(msg="Are you sure?", komsg="Aborted."):

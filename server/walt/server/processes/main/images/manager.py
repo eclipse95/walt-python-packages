@@ -120,8 +120,7 @@ class NodeImageManager:
         if image_name == "booted-image":
             image_fullname = info["node_image"]
             return self.store[image_fullname].filesystem
-        else:
-            return self.get_image_filesystem(requester, image_name)
+        return self.get_image_filesystem(requester, image_name)
 
     def get_cp_entity_attrs(self, requester, image_name, **info):
         return dict(image_name=image_name)
@@ -136,11 +135,10 @@ class NodeImageManager:
     def has_image(self, requester, image_name, default_allowed, expected=True):
         if default_allowed and image_name == "default":
             return True
-        else:
-            image = self.store.get_user_image_from_name(
-                requester, image_name, expected=expected
-            )
-            return image is not None
+        image = self.store.get_user_image_from_name(
+            requester, image_name, expected=expected
+        )
+        return image is not None
 
     def set_image(self, requester, nodes, image_name):
         is_default = image_name == "default"
@@ -195,9 +193,14 @@ class NodeImageManager:
             # the owner of the image may have changed, so the target of /persist
             # will have to be updated on relevant nodes; so let's call
             # wf_update_persist_exports() in all cases.
-            wf = Workflow([self.store.wf_update_image_mounts,
-                           self.server.exports.wf_update_persist_exports,
-                           self.dhcpd.wf_update, self.named.wf_update])
+            wf = Workflow(
+                [
+                    self.store.wf_update_image_mounts,
+                    self.server.exports.wf_update_persist_exports,
+                    self.dhcpd.wf_update,
+                    self.named.wf_update,
+                ]
+            )
             wf.run()
             # inform requester
             if is_default:
@@ -226,7 +229,7 @@ class NodeImageManager:
                 (
                     "Cannot open image %(image_name)s because it has already reached"
                     " its max number of layers.\n"
-                    + "(tip: walt image squash %(image_name)s)\n"
+                    "(tip: walt image squash %(image_name)s)\n"
                 )
                 % dict(image_name=image_name)
             )
@@ -258,8 +261,11 @@ class NodeImageManager:
             msg = self.store.get_image_overwrite_warning(image_fullname)
             requester.stderr.write(msg)
         session = ImageBuildSession(
-            self.blocking, self.store, image_fullname, image_overwrite,
-                username=username,
-                **info
+            self.blocking,
+            self.store,
+            image_fullname,
+            image_overwrite,
+            username=username,
+            **info,
         )
         return session

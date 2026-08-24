@@ -9,6 +9,7 @@ from collections import namedtuple
 from urllib.parse import urlparse
 
 import requests
+
 from walt.common.constants import WALT_SERVER_TCP_PORT
 from walt.common.tcp import Requests, client_sock_file, write_pickle
 
@@ -69,9 +70,8 @@ def http_read(url):
         if res.ok:
             print(url, "OK")
             return res.content
-        else:
-            print(url, res.reason)
-            return None
+        print(url, res.reason)
+        return None
     except Exception:
         print(url, "Connection failed")
         return None
@@ -87,20 +87,16 @@ class CanonicalPath(CanonicalPathBase):
         path = url_info.path
         if url_info.scheme == "http":
             return cls("http", path)
-        elif url_info.scheme == "tftp":
+        if url_info.scheme == "tftp":
             return cls("tftp", path)
-        elif url_info.scheme == "":
+        if url_info.scheme == "":
             if path[0] == "/":  # absolute path
                 return cls("tftp", path)
-            else:
-                # path relative to current dir
-                cur_dir = remote_curdir(env)
-                abs_path = os.path.join(cur_dir.abs_path, path)
-                return cls(cur_dir.proto, abs_path)
-        else:
-            raise NotImplementedError(
-                "[fake-ipxe] Unknown protocol: " + url_info.scheme
-            )
+            # path relative to current dir
+            cur_dir = remote_curdir(env)
+            abs_path = os.path.join(cur_dir.abs_path, path)
+            return cls(cur_dir.proto, abs_path)
+        raise NotImplementedError("[fake-ipxe] Unknown protocol: " + url_info.scheme)
 
     def to_url(self, env):
         url = self.proto + "://" + env["next-server"] + self.abs_path
@@ -115,8 +111,8 @@ class CanonicalPath(CanonicalPathBase):
         url = self.to_url(env)
         if self.proto == "http":
             return http_read(url)
-        else:  # tftp
-            return fake_tftp_read(env, self.abs_path)
+        # tftp
+        return fake_tftp_read(env, self.abs_path)
 
     def dirname(self):
         return CanonicalPath(self.proto, os.path.dirname(self.abs_path))
@@ -238,8 +234,7 @@ def execute_line(env, line):
         if words[0] == "boot":
             env["should-boot"] = True
             return False  # stop
-        else:
-            return True
+        return True
     # handle "sleep" directive
     if words[0] == "sleep":
         delay = int(words[1])

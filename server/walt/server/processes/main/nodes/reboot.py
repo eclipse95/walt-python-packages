@@ -1,7 +1,7 @@
-import numpy as np
-
 from collections import defaultdict
 from time import time
+
+import numpy as np
 
 from walt.common.formatting import format_sentence_about_nodes
 from walt.server.processes.main.nodes.netservice import node_request
@@ -22,14 +22,15 @@ def reboot_nodes(nodes, powersave, **env):
             wf_hard_reboot_nodes,
             wf_reply_requester,
         ],
-        **env
+        **env,
     )
     # start process
     wf.run()
 
 
-def wf_hard_reboot_virtual_nodes(wf, nodes_manager, remaining_nodes, reboot_cause,
-                                 **env):
+def wf_hard_reboot_virtual_nodes(
+    wf, nodes_manager, remaining_nodes, reboot_cause, **env
+):
     # check for virtual vs physical nodes
     # and hard reboot vnodes by killing their VM
     vmrebooted = []
@@ -38,8 +39,11 @@ def wf_hard_reboot_virtual_nodes(wf, nodes_manager, remaining_nodes, reboot_caus
             # restart VM
             nodes_manager.vnode_hard_reboot(node.mac)
             nodes_manager.change_nodes_bootup_status(
-                    nodes=[node], booted=False,
-                    cause=reboot_cause, method="vnode hard-reboot")
+                nodes=[node],
+                booted=False,
+                cause=reboot_cause,
+                method="vnode hard-reboot",
+            )
             # move node to 'vmrebooted' category
             remaining_nodes.remove(node)
             vmrebooted.append(node.name)
@@ -47,8 +51,9 @@ def wf_hard_reboot_virtual_nodes(wf, nodes_manager, remaining_nodes, reboot_caus
     wf.next()
 
 
-def wf_soft_reboot_nodes(wf, ev_loop, db, nodes_manager, hard_only, remaining_nodes,
-                         reboot_cause, **env):
+def wf_soft_reboot_nodes(
+    wf, ev_loop, db, nodes_manager, hard_only, remaining_nodes, reboot_cause, **env
+):
     if hard_only or len(remaining_nodes) == 0:
         wf.update_env(softrebooted=[], softreboot_errors={})
         wf.next()
@@ -61,8 +66,12 @@ def wf_soft_reboot_nodes(wf, ev_loop, db, nodes_manager, hard_only, remaining_no
             softrebootable_nodes,
             "REBOOT",
             wf_softreboot_callback,
-            dict(remaining_nodes=remaining_nodes, wf=wf,
-                 nodes_manager=nodes_manager, reboot_cause=reboot_cause),
+            dict(
+                remaining_nodes=remaining_nodes,
+                wf=wf,
+                nodes_manager=nodes_manager,
+                reboot_cause=reboot_cause,
+            ),
         )
 
 
@@ -75,7 +84,8 @@ def wf_softreboot_callback(results, wf, remaining_nodes, nodes_manager, reboot_c
                 remaining_nodes.remove(node)
                 softrebooted.append(node.name)
             nodes_manager.change_nodes_bootup_status(
-                nodes=nodes, booted=False, cause=reboot_cause, method="soft-reboot")
+                nodes=nodes, booted=False, cause=reboot_cause, method="soft-reboot"
+            )
             nodes_manager.record_nodes_boot_start(nodes)
         else:
             for node in nodes:
@@ -101,8 +111,15 @@ def wf_hard_reboot_nodes(wf, requester, remaining_nodes, **env):
     wf.next()
 
 
-def wf_client_hard_reboot(wf, requester, remaining_nodes, nodes_manager, reboot_cause,
-                          hard_reboot_method_name, **env):
+def wf_client_hard_reboot(
+    wf,
+    requester,
+    remaining_nodes,
+    nodes_manager,
+    reboot_cause,
+    hard_reboot_method_name,
+    **env,
+):
     mac_to_name = {node.mac: node.name for node in remaining_nodes}
     mac_to_node = {node.mac: node for node in remaining_nodes}
     node_macs = tuple(mac_to_name.keys())
@@ -110,8 +127,11 @@ def wf_client_hard_reboot(wf, requester, remaining_nodes, nodes_manager, reboot_
     hardrebooted = [mac_to_node[mac] for mac in mac_hardrebooted]
     if len(hardrebooted) > 0:
         nodes_manager.change_nodes_bootup_status(
-            nodes=hardrebooted, booted=False,
-            cause=reboot_cause, method=hard_reboot_method_name)
+            nodes=hardrebooted,
+            booted=False,
+            cause=reboot_cause,
+            method=hard_reboot_method_name,
+        )
         nodes_manager.record_nodes_boot_start(hardrebooted)
     wf.update_env(
         hardrebooted=[mac_to_name[mac] for mac in mac_hardrebooted],
@@ -124,14 +144,11 @@ def wf_client_hard_reboot(wf, requester, remaining_nodes, nodes_manager, reboot_
 
 def wf_filter_poe_rebootable(wf, server, remaining_nodes, **env):
     nodes_ok, _, errors = server.poe.filter_poe_rebootable(remaining_nodes)
-    wf.update_env(remaining_nodes=nodes_ok,
-                  hardreboot_errors=errors)
+    wf.update_env(remaining_nodes=nodes_ok, hardreboot_errors=errors)
     wf.next()
 
 
-def wf_poe_reboot(
-    wf, db, blocking, remaining_nodes, hardreboot_errors, **env
-):
+def wf_poe_reboot(wf, db, blocking, remaining_nodes, hardreboot_errors, **env):
     if len(remaining_nodes) == 0:
         # nothing to do here
         wf.update_env(hardrebooted=[])
@@ -145,7 +162,7 @@ def wf_poe_reboot(
     wf.update_env(
         not_already_off=not_already_off,
         already_off=already_off,
-        powered_off=powered_off
+        powered_off=powered_off,
     )
     if len(not_already_off) > 0:
         wf.insert_steps(
@@ -163,42 +180,48 @@ def wf_poe_reboot(
 
 def wf_poe_poweroff(wf, not_already_off, server, **env):
     wf.insert_steps([server.poe.wf_nodes_set_poe])
-    wf.update_env(nodes=not_already_off,
-                  poe_status=False,  # off
-                  reason="hard-reboot")
+    wf.update_env(nodes=not_already_off, poe_status=False, reason="hard-reboot")  # off
     wf.next()
 
 
-def wf_poe_after_poweroff(wf, ev_loop, nodes_manager, hardreboot_errors,
-                          nodes_ok, poe_errors, reboot_cause, **env):
+def wf_poe_after_poweroff(
+    wf,
+    ev_loop,
+    nodes_manager,
+    hardreboot_errors,
+    nodes_ok,
+    poe_errors,
+    reboot_cause,
+    **env,
+):
     hardreboot_errors.update(**poe_errors)
     wf.update_env(powered_off=nodes_ok)
     if len(nodes_ok) > 0:
         nodes_manager.change_nodes_bootup_status(
-            nodes=nodes_ok, booted=False,
-            cause=reboot_cause, method="PoE hard-reboot")
+            nodes=nodes_ok, booted=False, cause=reboot_cause, method="PoE hard-reboot"
+        )
         timeout_at = time() + POE_REBOOT_DELAY
         ev_loop.plan_event(ts=timeout_at, callback=wf.next)
     else:
         wf.next()
 
 
-def wf_poe_poweron(wf, ev_loop, server, already_off, powered_off,
-                   hardreboot_errors, **env):
+def wf_poe_poweron(
+    wf, ev_loop, server, already_off, powered_off, hardreboot_errors, **env
+):
     all_off = np.concatenate((already_off, powered_off)).view(np.recarray)
     if len(all_off) > 0:
         wf.insert_steps([server.poe.wf_nodes_set_poe])
-        wf.update_env(nodes=all_off,
-                      poe_status=True,  # on
-                      reason=None)
+        wf.update_env(nodes=all_off, poe_status=True, reason=None)  # on
         wf.next()
     else:
         wf.update_env(nodes_ok=[], poe_errors={})
         wf.next()
 
 
-def wf_poe_after_poweron(wf, nodes_manager,
-                         hardreboot_errors, nodes_ok, poe_errors, **env):
+def wf_poe_after_poweron(
+    wf, nodes_manager, hardreboot_errors, nodes_ok, poe_errors, **env
+):
     if len(nodes_ok) > 0:
         nodes_manager.record_nodes_boot_start(nodes_ok)
     hardreboot_errors.update(**poe_errors)
@@ -218,7 +241,7 @@ def wf_reply_requester(
     softreboot_errors,
     hardreboot_errors,
     hard_reboot_method_name,
-    **env
+    **env,
 ):
     rebooted = tuple(vmrebooted) + tuple(softrebooted) + tuple(hardrebooted)
     if len(rebooted) > 0:

@@ -2,12 +2,12 @@
 import contextlib
 import os
 import signal
+from collections import defaultdict
 from heapq import heappop, heappush
 from multiprocessing import current_process  # noqa: F401
 from select import POLLIN, POLLOUT, POLLPRI, poll
-from subprocess import PIPE, Popen, DEVNULL
+from subprocess import DEVNULL, PIPE, Popen
 from time import time
-from collections import defaultdict
 
 
 class BreakLoopRequested(Exception):
@@ -65,11 +65,11 @@ class ProcessListener:
         elif self._silent:
             stdout = DEVNULL
         else:
-            stdout = None   # no redirection, print to parent stdout
+            stdout = None  # no redirection, print to parent stdout
         if self._catch_stderr:
             stderr = PIPE
         else:
-            stderr = None   # no redirection, print to parent stdout
+            stderr = None  # no redirection, print to parent stdout
         self._popen = Popen(self._cmd, stdout=stdout, stderr=stderr, shell=True)
         self._pidfd = os.pidfd_open(self._popen.pid, 0)
 
@@ -100,12 +100,13 @@ class PollersCache:
         self._fds_ids_per_fd = defaultdict(set)
         self._poller_per_fds_id = {}
         self._events_per_fd = {}
+
     def get(self, fds):
         fds_id = self._fds_id_per_fds.get(fds, self._next_fds_id)
         if fds_id == self._next_fds_id:
             self._fds_id_per_fds[fds] = fds_id
             self._fds_per_fds_id[fds_id] = fds
-            #if current_process().name == "server-main":
+            # if current_process().name == "server-main":
             #    print("num fds:", len(self._fds_per_fds_id),
             #          "-- num fd:", len(self._events_per_fd))
             self._next_fds_id += 1
@@ -116,11 +117,13 @@ class PollersCache:
             [self._fds_ids_per_fd[fd].add(fds_id) for fd in fds]
             self._poller_per_fds_id[fds_id] = poller
         return poller
+
     def register_fd(self, fd, events):
-        #print(f"+ {fd}")
+        # print(f"+ {fd}")
         self._events_per_fd[fd] = events
+
     def remove_fd(self, fd):
-        #print(f"- {fd}")
+        # print(f"- {fd}")
         # remove all known fds which include fd
         for fds_id in self._fds_ids_per_fd[fd].copy():
             fds = self._fds_per_fds_id.pop(fds_id)
@@ -130,8 +133,9 @@ class PollersCache:
         # forget fd-specific info
         del self._events_per_fd[fd]
         del self._fds_ids_per_fd[fd]
+
     def update_fd(self, fd, events):
-        #print(f"m {fd}")
+        # print(f"m {fd}")
         self._events_per_fd[fd] = events
         for fds_id in self._fds_ids_per_fd[fd]:
             self._poller_per_fds_id[fds_id].modify(fd, events)
@@ -145,7 +149,7 @@ class PollersCache:
 # In case of error, the file descriptor is removed from
 # the set of watched descriptors.
 # When the set is empty, the loop stops.
-class EventLoop(object):
+class EventLoop:
     MAX_TIMEOUT_MS = 500
 
     def __init__(self):
@@ -164,8 +168,7 @@ class EventLoop(object):
     def get_polling_fds(self, single_listener=None):
         if single_listener is None:
             return tuple(sorted(set(self.listeners_per_fd.keys()) - self._disabled_fds))
-        else:
-            return (self.fd_per_listener_id[id(single_listener)],)
+        return (self.fd_per_listener_id[id(single_listener)],)
 
     def pop_pending_event(self, single_listener=None):
         if len(self.pending_events) == 0:
@@ -198,9 +201,8 @@ class EventLoop(object):
     def get_timeout(self, **opts):
         if not self.waiting_for_planned_events(**opts):
             return EventLoop.MAX_TIMEOUT_MS
-        else:
-            delay_ms = (self.planned_events[0][0] - time()) * 1000
-            return max(0, min(EventLoop.MAX_TIMEOUT_MS, delay_ms))
+        delay_ms = (self.planned_events[0][0] - time()) * 1000
+        return max(0, min(EventLoop.MAX_TIMEOUT_MS, delay_ms))
 
     def update_listener(self, listener, events=POLL_OPS_READ):
         fd = self.fd_per_listener_id[id(listener)]
@@ -265,7 +267,9 @@ class EventLoop(object):
                     ev = heappop(self.planned_events)
                     ts, kwargs_id, callback, repeat_delay, kwargs = ev
                     callback(**kwargs)
-                    poller = None  # list of fds should be recomputed after this callback
+                    poller = (
+                        None  # list of fds should be recomputed after this callback
+                    )
                     if repeat_delay:
                         next_ts = ts + repeat_delay
                         if next_ts < now:  # we are very late
@@ -274,7 +278,7 @@ class EventLoop(object):
                             next_ts,
                             callback=callback,
                             repeat_delay=repeat_delay,
-                            **kwargs
+                            **kwargs,
                         )
                     # if this planned event fulfilled the condition, quit
                     should_continue = self.should_continue(loop_condition)
@@ -293,12 +297,12 @@ class EventLoop(object):
                     poller = self._pollers.get(fds)
                 # first check if we have pending file descriptor notifications
                 # we should process right away
-                res = poller.poll(0)   # timeout = 0
+                res = poller.poll(0)  # timeout = 0
                 if len(res) == 0:
                     # compute timeout
                     timeout = self.get_timeout(**opts)
                     if timeout == 0:
-                        continue    # we are late, run planned events
+                        continue  # we are late, run planned events
                     # we known we will really wait, allow signals to interrupt
                     with self.signals_allowed():
                         # if signals were pending, signal handlers were called
@@ -351,8 +355,9 @@ class EventLoop(object):
         # print(f'__DEBUG__ {current_process().name} end depth={self.recursion_depth}')
         self.recursion_depth -= 1
 
-    def do(self, cmd, callback=None, silent=True,
-           catch_stdout=False, catch_stderr=False):
+    def do(
+        self, cmd, callback=None, silent=True, catch_stdout=False, catch_stderr=False
+    ):
         p = ProcessListener(cmd, callback, silent, catch_stdout, catch_stderr)
         p.start()
         self.register_listener(p)

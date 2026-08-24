@@ -14,7 +14,7 @@ class WalTToolboxApplication(WalTApplication):
     @cli.switch(["-h", "--help"], group="Meta-switches")
     def help(self):
         """Prints this help message and quits"""
-        print((self.get_help_prefix().rstrip()))
+        print(self.get_help_prefix().rstrip())
         # order sub-commands or categories by their ORDERING field
         # if they provide one, by their name otherwise
         ordering = []
@@ -24,12 +24,12 @@ class WalTToolboxApplication(WalTApplication):
             ordering.append((priority, name, subapp))
         subitems = []
         for priority, name, subapp in sorted(ordering):
-            doc = subapp.DESCRIPTION if subapp.DESCRIPTION else getdoc(subapp)
+            doc = subapp.DESCRIPTION or getdoc(subapp)
             subitems.append((name, doc))
         max_name_len = max(len(name) for name, doc in subitems)
         format_str = "    %-" + str(max_name_len) + "s  %s"
         for name, doc in subitems:
-            print((format_str % (name, doc)))
+            print(format_str % (name, doc))
 
 
 WALT_CATEGORY_COMMAND_HELP_PREFIX = """
@@ -60,4 +60,4 @@ class WalTCategoryApplication(WalTToolboxApplication):
         return self.PROGNAME.split()[-1]
 
     def get_category_short_desc(self):
-        return self.DESCRIPTION if self.DESCRIPTION else getdoc(self)
+        return self.DESCRIPTION or getdoc(self)

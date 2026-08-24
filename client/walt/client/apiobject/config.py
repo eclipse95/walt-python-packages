@@ -29,13 +29,14 @@ class APINodeConfig:
             @classmethod
             def _cls_init(cls, instance):
                 import functools
+
                 for prop in instance.__buffered_get_info__().keys():
                     setattr(
                         cls,
                         prop,
                         property(
                             functools.partial(_get_prop, prop),
-                            functools.partial(_set_prop, set_func, prop)
+                            functools.partial(_set_prop, set_func, prop),
                         ),
                     )
 

@@ -24,7 +24,7 @@ def run_cmd(cmd):
     subprocess.run(cmd, shell=True)
 
 
-with open(sys.argv[1], "r") as f:
+with open(sys.argv[1]) as f:
     job_conf = json.load(f)
 
 log_event("updating conf")

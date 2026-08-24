@@ -12,7 +12,7 @@ if typing.TYPE_CHECKING:
 
 
 # About terminology: See comment about it in image.py.
-class ImageShellSession(object):
+class ImageShellSession:
     def __init__(self, images: NodeImageStore, image: NodeImage, task_label):
         self.images = images
         self.registry = images.registry
@@ -44,11 +44,10 @@ class ImageShellSession(object):
                 requester.stderr.write(msg)
                 cb_return_status("NAME_NEEDS_CONFIRM")
                 return
-        else:  # save as a different name
-            if image_fullname in self.images:
-                requester.stderr.write("Bad name: Image already exists.\n")
-                cb_return_status("NAME_NOT_OK")
-                return
+        elif image_fullname in self.images:
+            requester.stderr.write("Bad name: Image already exists.\n")
+            cb_return_status("NAME_NOT_OK")
+            return
         # ok, all is fine
 
         # 2nd step: save the image

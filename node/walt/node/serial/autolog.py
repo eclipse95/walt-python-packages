@@ -51,7 +51,7 @@ vizwalt  af4e:TxStart:gghhiijjkkll
 """
 
 
-class SensorLogsMonitor(object):
+class SensorLogsMonitor:
     def __init__(self, serial_dev_path):
         self.f = open(serial_dev_path, "rb", 0)
         self.walt_logs = open(SERVER_LOGS_FIFO, "w")
@@ -86,28 +86,27 @@ class SensorLogsMonitor(object):
         rawline = rawline.strip()
         words = rawline.split()
         if len(words) == 0:
-            return
+            return None
         first = words[0]
         if not self.started:
             if first == "LOGSTART":
                 self.started = True
-        else:
-            if first == "LOGDEF":
-                prefix = words[2]
-                logdef = (
-                    prefix,
-                    dict(stream=words[1], sep=words[3], formatting=" ".join(words[4:])),
-                )
-                insort_right(self.logdefs, logdef)
-            elif first == "LOGVAR":
-                self.logvars[words[1]] = words[2]
-            elif len(self.logdefs) > 0:
-                # adding a char ('*') ensures that i will point
-                # after the matching prefix, even if (rawline == prefix)
-                i = bisect_right(self.logdefs, (rawline + "*",))
-                if i > 0 and rawline.startswith(self.logdefs[i - 1][0]):
-                    d = self.logdefs[i - 1][1]
-                    self.forward_log(ts=ts, rawline=rawline, **d)
+        elif first == "LOGDEF":
+            prefix = words[2]
+            logdef = (
+                prefix,
+                dict(stream=words[1], sep=words[3], formatting=" ".join(words[4:])),
+            )
+            insort_right(self.logdefs, logdef)
+        elif first == "LOGVAR":
+            self.logvars[words[1]] = words[2]
+        elif len(self.logdefs) > 0:
+            # adding a char ('*') ensures that i will point
+            # after the matching prefix, even if (rawline == prefix)
+            i = bisect_right(self.logdefs, (rawline + "*",))
+            if i > 0 and rawline.startswith(self.logdefs[i - 1][0]):
+                d = self.logdefs[i - 1][1]
+                self.forward_log(ts=ts, rawline=rawline, **d)
 
     def forward_log(self, ts, rawline, stream, sep, formatting):
         logargs = rawline.split(sep)[1:]

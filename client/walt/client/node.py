@@ -2,6 +2,7 @@ import sys
 import time
 
 from plumbum import cli
+
 from walt.client.application import WalTApplication, WalTCategoryApplication
 from walt.client.config import conf
 from walt.client.link import ClientToServerLink
@@ -13,8 +14,8 @@ from walt.client.types import (
     NODE_CONFIG_PARAM,
     NODE_CP_DST,
     NODE_CP_SRC,
-    TARGET_IMAGE_NAME,
     SET_OF_NODES,
+    TARGET_IMAGE_NAME,
 )
 from walt.common.tools import SilentBusyIndicator
 
@@ -57,16 +58,16 @@ class WalTNode(WalTCategoryApplication):
         nodes_ip = None
         if several_nodes_allowed and capture_output:
             sys.stderr.write("Error: Only one node allowed when capturing output.\n")
-            return
+            return None
         with ClientToServerLink() as server:
             if not WalTNode.check_nodes_ownership(server, node_set):
-                return
+                return None
             nodes_ip = server.get_nodes_ip(node_set)
             if len(nodes_ip) == 0:
-                return  # issue already reported
-            elif len(nodes_ip) > 1 and not several_nodes_allowed:
+                return None  # issue already reported
+            if len(nodes_ip) > 1 and not several_nodes_allowed:
                 sys.stderr.write("Error: this command must target 1 node only.\n")
-                return
+                return None
             if not WalTNode.wait_for_nodes(server, node_set):
                 return False
         if nodes_ip:
@@ -74,6 +75,7 @@ class WalTNode(WalTCategoryApplication):
                 if startup_msg:
                     print(startup_msg)
                 from walt.client.interactive import run_node_cmd
+
                 res = run_node_cmd(ip, cmdargs, tty, capture_output)
                 if capture_output:
                     return res
@@ -87,7 +89,7 @@ class WalTNode(WalTCategoryApplication):
             nodes_info = server.get_nodes_info(node_name)
             if len(nodes_info) == 0:
                 return  # issue already reported
-            elif len(nodes_info) > 1:
+            if len(nodes_info) > 1:
                 sys.stderr.write("Error: this command must target 1 node only.\n")
                 return
             node_info = nodes_info[0]
@@ -95,11 +97,13 @@ class WalTNode(WalTCategoryApplication):
                 sys.stderr.write("Error: console is only available on virtual nodes.\n")
                 return
             from walt.client.console import run_node_console
+
             run_node_console(server, node_info)
 
     @staticmethod
-    def boot_nodes(node_set, image_name_or_default, cause,
-                   ownership_mode="owned-or-free"):
+    def boot_nodes(
+        node_set, image_name_or_default, cause, ownership_mode="owned-or-free"
+    ):
         with ClientToServerLink() as server:
             if server.has_image(image_name_or_default, True):
                 # the list of nodes keywords "my-nodes" or "free-nodes" refers to
@@ -133,7 +137,7 @@ class WalTNode(WalTCategoryApplication):
                     "",
                     "Device",
                     "Devices",
-                ).replace('  ', ' ')
+                ).replace("  ", " ")
                 + " Aborting.\n"
             )
             return False
@@ -277,10 +281,8 @@ class WalTNodeSave(WalTApplication):
     def main(self, node_name: NODE, image_name: TARGET_IMAGE_NAME):
         with ClientToServerLink() as server:
             if not WalTNode.check_nodes_ownership(server, node_name):
-                return
-            info = dict(mode="node-diff",
-                        node_name=node_name,
-                        image_name=image_name)
+                return None
+            info = dict(mode="node-diff", node_name=node_name, image_name=image_name)
             info = server.create_image_build_session(**info)
             if info is None:
                 return False  # issue already reported
@@ -393,6 +395,7 @@ class WalTNodePing(WalTApplication):
             node_ip = server.get_node_ip(node_name)
         if node_ip:
             from walt.client.interactive import run_device_ping
+
             run_device_ping(node_ip)
 
 
@@ -414,6 +417,7 @@ class WalTNodeShell(WalTApplication):
 
     def main(self, node_name: NODE):
         from walt.client.interactive import NODE_SHELL_MESSAGE
+
         WalTNode.run_cmd(node_name, False, [], startup_msg=NODE_SHELL_MESSAGE, tty=True)
 
 
@@ -447,7 +451,7 @@ class WalTNodeCp(WalTApplication):
         with ClientToServerLink() as server:
             info = server.validate_node_cp(src, dst)
             if info is None:
-                return
+                return None
             if info["status"] == "FAILED":
                 return False
             if info["node_ownership"] == "not_owned":
@@ -470,6 +474,7 @@ class WalTNodeCp(WalTApplication):
                 server.node_cp_to_booted_image(node_name, **path_info)
             else:
                 from walt.client.transfer import run_transfer_with_node
+
                 try:
                     run_transfer_with_node(**info)
                 except (KeyboardInterrupt, EOFError):
@@ -512,6 +517,7 @@ class WalTNodeExpose(WalTApplication):
                 % (local_port, node_name, node_port)
             )
             from walt.client.expose import TCPExposer
+
             exposer = TCPExposer(local_port, node_ip, node_port)
             return exposer.run()
 

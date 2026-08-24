@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from plumbum import cli
+
 from walt.client.application import WalTApplication, WalTCategoryApplication
 from walt.client.config import conf
 from walt.client.link import ClientToServerLink
@@ -51,8 +52,7 @@ class WalTImageClone(WalTApplication):
                     " (cf. walt image show)."
                 )
                 return True  # success
-            else:
-                return False  # issue
+            return False  # issue
 
     @cli.autoswitch(help="do it, even if it overwrites an existing image.")
     def force(self):
@@ -75,6 +75,7 @@ class WalTImagePublish(WalTApplication):
     def main(self, image_name: IMAGE):
         with ClientToServerLink() as server_link:
             from walt.common.formatting import columnate
+
             registries = server_link.get_registries()
             if len(registries) == 0:
                 print("Sorry, no image registry is configured on this platform.")
@@ -92,13 +93,12 @@ class WalTImagePublish(WalTApplication):
                     return False
                 # there is a single registry => 'auto' is OK.
                 self.registry = registries[0][0]
-            else:
-                if self.registry not in tuple(reg_info[0] for reg_info in registries):
-                    print(f"Invalid registry '{self.registry}'.")
-                    print("The following registries are available:")
-                    print()
-                    print(columnate(registries, ("Registry", "Description")))
-                    return False
+            elif self.registry not in tuple(reg_info[0] for reg_info in registries):
+                print(f"Invalid registry '{self.registry}'.")
+                print("The following registries are available:")
+                print()
+                print(columnate(registries, ("Registry", "Description")))
+                return False
             server_link.set_busy_label("Validating / Publishing")
             res = server_link.publish_image(self.registry, image_name)
             if res[0] is False:
@@ -120,10 +120,14 @@ class WalTImageShow(WalTApplication):
             print("Sorry, but options --names-only and --all are mutually exclusive.")
             return False
         with ClientToServerLink() as server:
-            print(server.show_images(username=conf.walt.username,
-                                     show_all=self._all,
-                                     names_only=self._names_only,
-                                     refresh=self._refresh))
+            print(
+                server.show_images(
+                    username=conf.walt.username,
+                    show_all=self._all,
+                    names_only=self._names_only,
+                    refresh=self._refresh,
+                )
+            )
 
     @cli.autoswitch(help="show all OS images on the platform")
     def all(self):
@@ -153,13 +157,16 @@ class WalTImageShell(WalTApplication):
                 return  # issue already reported
             session_id, image_fullname, container_name, default_new_name = session_info
             from walt.client.interactive import run_image_shell_prompt
+
             run_image_shell_prompt(image_fullname, container_name)
             try:
                 while True:
                     print("------")
                     print("You can save changes as a new image, or overwrite this one.")
-                    print("Just press <enter> to reuse the name "
-                          f'"{default_new_name}" and overwite the image.')
+                    print(
+                        "Just press <enter> to reuse the name "
+                        f'"{default_new_name}" and overwite the image.'
+                    )
                     print("You can also press ctrl-C to abort.")
                     print("------")
                     new_name = input("New image name: ")
@@ -261,10 +268,10 @@ class WalTImageBuild(WalTApplication):
         if self.src_url is None and self.src_dir is None:
             print("You must specify 1 of the options --from-url and --from-dir.")
             print("See 'walt help show image-build' for more info.")
-            return
+            return None
         if self.sub_dir is not None and self.src_url is None:
             print("Option --sub-dir is only supported when combined with --from-url.")
-            return
+            return None
         mode = "dir" if self.src_url is None else "url"
         subdir = self.sub_dir.strip("/") if self.sub_dir is not None else ""
         with ClientToServerLink() as server:
@@ -284,6 +291,7 @@ class WalTImageBuild(WalTApplication):
             session_id = info.pop("session_id")
             if mode == "dir":
                 from walt.client.transfer import run_transfer_for_image_build
+
                 try:
                     if not run_transfer_for_image_build(**info):
                         print("See 'walt help show image-build' for help.")
@@ -292,11 +300,10 @@ class WalTImageBuild(WalTApplication):
                     print()
                     print("Aborted.")
                     return False
-            else:
-                if not server.run_image_build_from_url(session_id):
-                    # failed
-                    print("See 'walt help show image-build' for help.")
-                    return False
+            elif not server.run_image_build_from_url(session_id):
+                # failed
+                print("See 'walt help show image-build' for help.")
+                return False
             server.finalize_image_build_session(session_id)
 
 
@@ -330,6 +337,7 @@ class WalTImageCp(WalTApplication):
             session_id, image_fullname, container_name, default_new_name = session_info
             info.update(image_fullname=image_fullname, container_name=container_name)
             from walt.client.transfer import run_transfer_with_image
+
             try:
                 run_transfer_with_image(**info)
                 if info["client_operand_index"] == 0:

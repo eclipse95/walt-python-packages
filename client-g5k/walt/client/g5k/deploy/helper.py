@@ -5,10 +5,11 @@ import sys
 import time
 import traceback
 from getpass import getuser
+from importlib.resources import files
 
 import requests
-from importlib.resources import files
 from urllib3.exceptions import InsecureRequestWarning
+
 from walt.client.config import conf, save_config
 from walt.client.g5k.deploy.status import (
     get_deployment_status,
@@ -76,7 +77,10 @@ def analyse_g5k_nodes(info, site):
     # $ oarstat -p | oarprint host -P eth_count,host -f -
     oarstat_output = run_cmd_on_site(info, site, ["oarstat", "-p"], True)
     output = run_cmd_on_site(
-        info, site, "oarprint host -P eth_count,host -f -".split(), input=oarstat_output
+        info,
+        site,
+        ["oarprint", "host", "-P", "eth_count,host", "-f", "-"],
+        input=oarstat_output,
     )
     walt_nodes = {}
     for line in output.strip().split("\n"):
@@ -99,8 +103,8 @@ def get_node_info(node_hostname):
     node_nodomain, site = node_hostname.split(".")[:2]
     node_cluster = node_nodomain.rsplit("-", maxsplit=1)[0]
     node_api = (
-            f"https://api.grid5000.fr/sid/sites/{site}/"
-            f"clusters/{node_cluster}/nodes/{node_nodomain}.json"
+        f"https://api.grid5000.fr/sid/sites/{site}/"
+        f"clusters/{node_cluster}/nodes/{node_nodomain}.json"
     )
     resp = requests.get(node_api, verify=False)
     return resp.json()
@@ -139,6 +143,7 @@ def configure_server(info, walt_netcard_name):
     )
     # get conf script and send it to the server
     import walt.client.g5k.deploy
+
     script_path = files(walt.client.g5k.deploy) / "remote-server-conf.py"
     run_cmd_on_site(
         info,
@@ -147,8 +152,10 @@ def configure_server(info, walt_netcard_name):
         input=script_path.read_text(),
     )
     # execute conf script
-    cmd = (f"ssh root@{server_node}"
-           " walt-python3 /tmp/remote-server-conf.py /tmp/g5k.json")
+    cmd = (
+        f"ssh root@{server_node}"
+        " walt-python3 /tmp/remote-server-conf.py /tmp/g5k.json"
+    )
     run_cmd_on_site(
         info,
         server_site,

@@ -8,8 +8,8 @@ from walt.common.formatting import format_sentence
 from walt.server.processes.blocking.images.metadata import pull_user_metadata
 from walt.server.processes.blocking.registries import (
     DockerHubClient,
-    get_registry_client,
     MissingRegistryCredentials,
+    get_registry_client,
 )
 from walt.server.tools import get_clone_url_locations
 
@@ -177,7 +177,7 @@ def verify_compatibility_issue(
 ):
     ws_image = image_store[ws_image_fullname]
     if not ws_image.in_use():
-        return  # no problem
+        return None  # no problem
     # there is a risk of overwritting the mounted ws image with
     # a target image that is incompatible.
     needed_models = nodes_manager.get_node_models_using_image(ws_image_fullname)
@@ -277,8 +277,7 @@ def workflow_if(condition_func, workflow_if_true, workflow_if_false):
     def workflow_if_instance(**context):
         if condition_func(**context) is not False:
             return workflow_run(workflow_if_true, **context)
-        else:
-            return workflow_run(workflow_if_false, **context)
+        return workflow_run(workflow_if_false, **context)
 
     return workflow_if_instance
 
@@ -326,7 +325,7 @@ def perform_clone(requester, clonable_link, image_store, force, image_name, **kw
         labels = image_store[remote_image_fullname].get_labels()
     elif remote_location == "hub":
         hub = DockerHubClient()
-        requester.ensure_registry_conf_has_credentials('hub')
+        requester.ensure_registry_conf_has_credentials("hub")
         remote_user_metadata = pull_user_metadata(hub, remote_user)
         if remote_image_fullname not in remote_user_metadata["walt.user.images"]:
             return exit_no_such_image(requester)
@@ -434,10 +433,8 @@ def perform_clone(requester, clonable_link, image_store, force, image_name, **kw
     if res:
         if existing_ws_image:
             return ("OK_BUT_REBOOT_NODES", ws_image_fullname)
-        else:
-            return ("OK", ws_image_fullname)
-    else:
-        return ("FAILED",)
+        return ("OK", ws_image_fullname)
+    return ("FAILED",)
 
 
 # this implements walt image clone

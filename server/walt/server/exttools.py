@@ -24,8 +24,7 @@ class ExtTool:
         if cmd_fullpath is None:
             if required:
                 raise Exception(f"Executable {cmdname} not found on OS.")
-            else:
-                return None
+            return None
         return ExtTool(cmd_fullpath)
 
     def __init__(self, *path):

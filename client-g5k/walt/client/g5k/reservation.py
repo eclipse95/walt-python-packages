@@ -112,8 +112,8 @@ def slot_has_kavlan(slot):
         if element == "kavlan":
             if isinstance(value, list):  # kavlan-global
                 return len(value) > 0
-            else:  # kavlan-local: value is int
-                return value > 0
+            # kavlan-local: value is int
+            return value > 0
     return False
 
 
@@ -202,7 +202,7 @@ def get_helper_command(deployment_id):
 
 
 def get_job_logs_dir(deployment_id):
-    return f"{str(Path.home())}/.walt-g5k/deployments/{deployment_id}/logs"
+    return f"{Path.home()!s}/.walt-g5k/deployments/{deployment_id}/logs"
 
 
 def walltime_as_seconds(wt):

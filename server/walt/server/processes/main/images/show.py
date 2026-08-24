@@ -2,8 +2,8 @@ import numpy as np
 
 from walt.common.formatting import format_paragraph
 from walt.server.processes.main.images.tabular import (
-        get_user_tabular_data,
-        get_all_tabular_data,
+    get_all_tabular_data,
+    get_user_tabular_data,
 )
 from walt.server.tools import np_columnate
 
@@ -36,9 +36,9 @@ No OS images found!"""
 
 def user_subsets(data, username):
     # user: images of requester
-    mask_u = (data.user == username)
+    mask_u = data.user == username
     # default: images of "waltplatform" with "-default" suffix
-    mask_d = (data.user == "waltplatform")
+    mask_d = data.user == "waltplatform"
     mask_d &= np.char.endswith(data.name.astype(str), "-default")
     # other: other images
     mask_o = ~mask_u & ~mask_d
@@ -51,18 +51,25 @@ def generate_table(title, footnote, records, *col_titles):
     return format_paragraph(title, np_columnate(table), footnote)
 
 
-def get_tabular_data(db, images_store, requester,
-                     username, refresh,
-                     may_clone_default_images=True):
-    fields = ("user", "name", "in_use", "created",
-              "compatibility:compact", "clonable_link")
+def get_tabular_data(
+    db, images_store, requester, username, refresh, may_clone_default_images=True
+):
+    fields = (
+        "user",
+        "name",
+        "in_use",
+        "created",
+        "compatibility:compact",
+        "clonable_link",
+    )
     data = get_all_tabular_data(db, images_store, refresh, fields)
     res_user, res_other, res_default = user_subsets(data, username)
     if len(res_user) == 0 and may_clone_default_images:
         # new user, try to make his life easier by cloning
         # default images of node models present on the platform.
         valid, updated, _ = images_store.get_clones_of_default_images(
-                                requester, "all-nodes")
+            requester, "all-nodes"
+        )
         if valid and updated:
             # succeeded, restart the process to get info about new images
             return get_tabular_data(
@@ -83,12 +90,14 @@ def show(requester, images_manager, username, show_all, names_only, refresh):
     # verified on client side.
     if names_only:
         fields = ("name",)
-        data = get_user_tabular_data(db, images_store, requester,
-                                     username, refresh, fields)
+        data = get_user_tabular_data(
+            db, images_store, requester, username, refresh, fields
+        )
         return (data.name + "\n").sum().rstrip("\n")
     # compute "user", "other" and "default" subsets
     res_user, res_other, res_default = get_tabular_data(
-            db, images_store, requester, username, refresh)
+        db, images_store, requester, username, refresh
+    )
     # format output
     result_msg = ""
     footnotes = ()

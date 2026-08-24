@@ -22,8 +22,10 @@ def sanitize_pname(pname):
 def all_packages_name_and_version():
     cmd = shlex.split("dev/python.sh -m pip list --format json")
     proc = subprocess.run(cmd, text=True, stdout=subprocess.PIPE)
-    return {sanitize_pname(p_info["name"]): p_info["version"]
-            for p_info in json.loads(proc.stdout)}
+    return {
+        sanitize_pname(p_info["name"]): p_info["version"]
+        for p_info in json.loads(proc.stdout)
+    }
 
 
 def parse_requires_tag(text):
@@ -42,10 +44,7 @@ def get_packages_info():
     parts = proc.stdout.split("\n---\n")
     assert len(parts) == len(package_names)
     return {
-        name: {
-            "version": packages_info[name],
-            "requires": parse_requires_tag(part)
-        }
+        name: {"version": packages_info[name], "requires": parse_requires_tag(part)}
         for name, part in zip(package_names, parts)
     }
 

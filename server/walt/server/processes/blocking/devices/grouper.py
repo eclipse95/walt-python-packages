@@ -34,7 +34,7 @@ class Grouper:
         item1_group_id = self.get_group_id(item1)
         item2_group_id = self.get_group_id(item2)
         if item1_group_id == item2_group_id:
-            raise AlreadyGroupedException()
+            raise AlreadyGroupedException
         item2_friends = self.items_per_group_id.pop(item2_group_id)
         for item in item2_friends:
             self.group_id_per_item[item] = item1_group_id

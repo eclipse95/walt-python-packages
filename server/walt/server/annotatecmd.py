@@ -43,7 +43,7 @@ def run():
     if mode == "line":
 
         def dump(out_stream, tag, obj):
-            out_stream.write(f"{tag}: {repr(obj)}\n")
+            out_stream.write(f"{tag}: {obj!r}\n")
             out_stream.flush()
 
     elif mode == "pickle4":

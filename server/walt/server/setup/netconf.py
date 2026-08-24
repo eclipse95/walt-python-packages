@@ -9,14 +9,15 @@ from textwrap import wrap
 
 import netifaces
 from plumbum.cli.terminal import prompt
-from walt.doc.md import display_doc
+
 from walt.common.formatting import columnate, format_sentence, framed, highlight
 from walt.common.term import (
-        alternate_screen_buffer,
-        choose,
-        clear_screen,
-        wait_for_large_enough_terminal,
+    alternate_screen_buffer,
+    choose,
+    clear_screen,
+    wait_for_large_enough_terminal,
 )
+from walt.doc.md import display_doc
 from walt.server.tools import wait_message_read
 
 EDITOR_TOP_MESSAGE = """\
@@ -150,8 +151,8 @@ def pretty_print_netconf(netconf):
     for netname in netnames:
         rows.append(netname_row_values(netconf, netname))
     screen = framed(
-            "WalT network configuration",
-            columnate(rows, header, shrink_empty_cols=True),
+        "WalT network configuration",
+        columnate(rows, header, shrink_empty_cols=True),
     )
     min_width = len(screen.split("\n", maxsplit=1)[0])
     clear_screen()

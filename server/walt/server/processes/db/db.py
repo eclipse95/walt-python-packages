@@ -1,8 +1,9 @@
+from datetime import datetime
+from time import time
+
 import numpy as np
 import psycopg2.extras
-from datetime import datetime
-from psycopg2.extensions import register_adapter, AsIs
-from time import time
+from psycopg2.extensions import AsIs, register_adapter
 
 from walt.common.tools import get_mac_address
 from walt.server import const
@@ -247,20 +248,23 @@ class ServerDB(PostgresDB):
         self.commit()
 
     LOGS_SQL_PROJ = (
-            "EXTRACT(EPOCH FROM l.timestamp)::float8 as timestamp, " +
-            "l.line, " +
-            "d.name as issuer, " +
-            "s.name as stream")
+        "EXTRACT(EPOCH FROM l.timestamp)::float8 as timestamp, "
+        "l.line, "
+        "d.name as issuer, "
+        "s.name as stream"
+    )
 
     def create_server_logs_cursor(self, **kwargs):
         self.commit()
         sql, args = self.format_logs_query(
-                ServerDB.LOGS_SQL_PROJ, ordering="l.timestamp", **kwargs)
+            ServerDB.LOGS_SQL_PROJ, ordering="l.timestamp", **kwargs
+        )
         return self.create_server_cursor(sql, args)
 
     def get_multiple_connectivity_info(self, device_macs):
         row_values_placeholder = ",".join(["(%s)"] * len(device_macs))
-        return self.execute(f"""
+        return self.execute(
+            f"""
             with cte0 as (
                 select * from (values {row_values_placeholder}) as t(device_mac)),
             cte1 as (
@@ -291,7 +295,9 @@ class ServerDB(PostgresDB):
             left join switches s on s.mac = t.mac
             left join devices sw_d on sw_d.mac = s.mac
             left join devices dev_d on dev_d.mac = t.device_mac
-            where rownum = 1""", device_macs)
+            where rownum = 1""",
+            device_macs,
+        )
 
     def count_logs(self, **kwargs):
         sql, args = self.format_logs_query("count(*)", **kwargs)
@@ -306,7 +312,7 @@ class ServerDB(PostgresDB):
         stream_mode=None,
         streams_regexp=None,
         logline_regexp=None,
-        exclude_consoles=False
+        exclude_consoles=False,
     ):
         args = []
         constraints = ["s.issuer_mac = d.mac", "l.stream_id = s.id"]
@@ -359,7 +365,8 @@ class ServerDB(PostgresDB):
             FROM vpnnodes vn
             WHERE va.vpnmac = vn.vpnmac
               AND vn.mac = %s
-            """, (mac, mac)
+            """,
+            (mac, mac),
         )
 
         self.execute(
@@ -393,25 +400,30 @@ class ServerDB(PostgresDB):
         """)
 
     def revoke_vpn_auth_key(self, vpnmac):
-        return self.execute("""
+        return self.execute(
+            """
                 UPDATE vpnauth
                 SET revoked = true
                 WHERE vpnmac = %s""",
-                (vpnmac,))
+            (vpnmac,),
+        )
 
     def insert_multiple_logs(self, records):
         # due to buffering, we might still get stream_ids of a device
         # recently forgotten, which could lead to a foreign constraint violation
         # (stream_id no longer exists in the logstream table).
         # the following query just ignores those log records.
-        psycopg2.extras.execute_values(self.c, """
+        psycopg2.extras.execute_values(
+            self.c,
+            """
                 INSERT INTO logs(timestamp,line,stream_id)
                 SELECT TO_TIMESTAMP(l.timestamp),l.line,l.stream_id
                 FROM (
                     VALUES %s
                 ) l (timestamp,line,stream_id), logstreams s
                 WHERE l.stream_id = s.id""",
-                records)
+            records,
+        )
 
     def get_user_images(self, username):
         sql = f"""  SELECT i.fullname, count(n.mac)>0 as in_use
@@ -438,14 +450,15 @@ class ServerDB(PostgresDB):
             )
         else:  # poe off
             assert reason is not None
-            arr = np.empty(sw_ports_info.size,
-                           dtype=[("sw_mac", object),
-                                  ("sw_port", object),
-                                  ("reason", object)]).view(np.recarray)
+            arr = np.empty(
+                sw_ports_info.size,
+                dtype=[("sw_mac", object), ("sw_port", object), ("reason", object)],
+            ).view(np.recarray)
             arr[["sw_mac", "sw_port"]] = sw_ports_info[["sw_mac", "sw_port"]]
             arr["reason"] = reason
-            psycopg2.extras.execute_values(self.c,
-                    """INSERT INTO poeoff VALUES %s;""", arr)
+            psycopg2.extras.execute_values(
+                self.c, """INSERT INTO poeoff VALUES %s;""", arr
+            )
         self.commit()
 
     def get_poe_off_macs(self, reason=None):
@@ -485,13 +498,15 @@ class ServerDB(PostgresDB):
     def update_node_location(self, node_mac, sw_mac, sw_port):
         # check if location of mac already existed in db
         db_locs = self.execute(
-        """ SELECT mac2 as sw_mac, port2 as sw_port, confirmed
+            """ SELECT mac2 as sw_mac, port2 as sw_port, confirmed
             FROM topology
             WHERE mac1 = %s
         UNION
             SELECT mac1 as sw_mac, port1 as sw_port, confirmed
             FROM topology
-            WHERE mac2 = %s """, (node_mac, node_mac))
+            WHERE mac2 = %s """,
+            (node_mac, node_mac),
+        )
         if len(db_locs) == 1:
             db_loc = db_locs[0]
             if (db_loc.sw_mac, db_loc.sw_port) == (sw_mac, sw_port):
@@ -503,32 +518,44 @@ class ServerDB(PostgresDB):
                         """ UPDATE topology
                             SET confirmed = true
                             WHERE mac1 = %s
-                              AND mac2 = %s """, macs)
+                              AND mac2 = %s """,
+                        macs,
+                    )
                     self.commit()
                 # nothing more to do
                 return False  # location did not change
-            else:
-                # remove existing db entry for node_mac
-                db_macs = tuple(sorted((node_mac, db_loc.sw_mac)))
-                self.execute(
-                        """ DELETE FROM topology
+            # remove existing db entry for node_mac
+            db_macs = tuple(sorted((node_mac, db_loc.sw_mac)))
+            self.execute(
+                """ DELETE FROM topology
                             WHERE mac1 = %s
-                              AND mac2 = %s """, db_macs)
-                # continue below
+                              AND mac2 = %s """,
+                db_macs,
+            )
+            # continue below
         # remove any existing db entry at (sw_mac, sw_port)
-        self.execute("""DELETE FROM topology
+        self.execute(
+            """DELETE FROM topology
                         WHERE mac1 = %s
-                        AND port1 = %s """, (sw_mac, sw_port))
-        self.execute("""DELETE FROM topology
+                        AND port1 = %s """,
+            (sw_mac, sw_port),
+        )
+        self.execute(
+            """DELETE FROM topology
                         WHERE mac2 = %s
-                        AND port2 = %s """, (sw_mac, sw_port))
+                        AND port2 = %s """,
+            (sw_mac, sw_port),
+        )
         # insert the new entry
         if node_mac < sw_mac:
             args = (node_mac, sw_mac, None, sw_port)
         else:
             args = (sw_mac, node_mac, sw_port, None)
-        self.execute("""INSERT INTO topology(mac1, mac2,
+        self.execute(
+            """INSERT INTO topology(mac1, mac2,
                              port1, port2, confirmed)
-                        VALUES (%s, %s, %s, %s, true); """, args)
+                        VALUES (%s, %s, %s, %s, true); """,
+            args,
+        )
         self.commit()
         return True

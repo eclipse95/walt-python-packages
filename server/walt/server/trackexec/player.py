@@ -1,16 +1,15 @@
-import numpy as np
 import sys
-
 from collections import defaultdict
-from datetime import datetime, timedelta, date, time as midnight
+from datetime import date, datetime, timedelta
+from datetime import time as midnight
 from pathlib import Path
-from plumbum import cli
-from walt.doc.pager import Pager
-from walt.server.trackexec.const import (
-        SEC_AS_TS, MIN_AS_TS, HOUR_AS_TS, DAY_AS_TS
-)
-from walt.server.trackexec.reader import LogsReader
 
+import numpy as np
+from plumbum import cli
+
+from walt.doc.pager import Pager
+from walt.server.trackexec.const import DAY_AS_TS, HOUR_AS_TS, MIN_AS_TS, SEC_AS_TS
+from walt.server.trackexec.reader import LogsReader
 
 MD_HELP_SCREEN = """
 Shortcut keys:
@@ -111,29 +110,32 @@ class TrackExecPlayer(Pager):
     def _display_file_id(self):
         if self._explicit_display_file_id is not None:
             return self._explicit_display_file_id
-        else:
-            return self._exec_file_id
+        return self._exec_file_id
 
     @property
     def _state(self):
         """Save the player state"""
-        return (self._reader.current_block_id,
-                self._block_source_data_idx,
-                self._old_display_filename,
-                self._scroll_index)
+        return (
+            self._reader.current_block_id,
+            self._block_source_data_idx,
+            self._old_display_filename,
+            self._scroll_index,
+        )
 
     @_state.setter
     def _state(self, value):
         """Restore the player to previously saved state"""
         # restore state values and reload the block
-        (block_id,
-         self._block_source_data_idx,
-         self._old_display_filename,
-         self._scroll_index) = value
+        (
+            block_id,
+            self._block_source_data_idx,
+            self._old_display_filename,
+            self._scroll_index,
+        ) = value
         self._reader.seek(block_id)
 
     def _is_end_of_block(self):
-        return self._block_source_data_idx == len(self._block_source_data) -1
+        return self._block_source_data_idx == len(self._block_source_data) - 1
 
     def _is_start_of_trace(self):
         if self._reader.current_block_id > 0:
@@ -157,12 +159,11 @@ class TrackExecPlayer(Pager):
     def _step_no_message(self):
         if self._is_end_of_trace():
             return False
+        if self._is_end_of_block():
+            self._jump_to_next_block()
         else:
-            if self._is_end_of_block():
-                self._jump_to_next_block()
-            else:
-                self._block_source_data_idx += 1
-            return True
+            self._block_source_data_idx += 1
+        return True
 
     def _step(self, err_msg='"step" failed: reached the end of exec trace'):
         res = self._step_no_message()
@@ -172,7 +173,7 @@ class TrackExecPlayer(Pager):
 
     def _next(self):
         init_stack_depth = self._exec_point.stack_depth
-        err_msg='"next" failed: reached the end of exec trace'
+        err_msg = '"next" failed: reached the end of exec trace'
         # single-step at least once
         if not self._step(err_msg):
             return False
@@ -180,16 +181,16 @@ class TrackExecPlayer(Pager):
         # or the stack depth back to its original level
         while True:
             # check if we should further analyse the block
-            if (self._reader.current_block_min_stack_size > init_stack_depth
-                    and not self._block_has_breakpoints()
-               ):
+            if (
+                self._reader.current_block_min_stack_size > init_stack_depth
+                and not self._block_has_breakpoints()
+            ):
                 # we know we will not stop in this block
                 if self._reader.at_last_block():
                     self.error_message = err_msg  # end of trace, "next" failed
                     return False
-                else:
-                    self._jump_to_next_block()  # try next block
-                    continue
+                self._jump_to_next_block()  # try next block
+                continue
             # process the block
             while True:
                 # test if "next" operation terminates here
@@ -217,11 +218,10 @@ class TrackExecPlayer(Pager):
                 # we know we will not stop in this block
                 if self._reader.at_last_block():
                     # jump to the end of the block (= end of the trace)
-                    self._block_source_data_idx = len(self._block_source_data) -1
+                    self._block_source_data_idx = len(self._block_source_data) - 1
                     return True
-                else:
-                    self._jump_to_next_block()  # try next block
-                    continue
+                self._jump_to_next_block()  # try next block
+                continue
             # process the block
             while True:
                 # test if we should stop because of a breakpoint
@@ -244,7 +244,7 @@ class TrackExecPlayer(Pager):
         # "HH:MM:SS.ssssss" format.
         ts = self._block_source_data.timestamp / SEC_AS_TS
         decimals, integrals = np.modf(ts)
-        ts = np.add(integrals, np.rint(decimals*1000000) / 1000000) * SEC_AS_TS
+        ts = np.add(integrals, np.rint(decimals * 1000000) / 1000000) * SEC_AS_TS
         ts = ts.astype(np.uint64)
         # find the line opcode just before the target timestamp:
         # ts(data_idx) <= target_ts < ts(data_idx+1)
@@ -254,19 +254,20 @@ class TrackExecPlayer(Pager):
         #    before target_ts. This rule increases the chances to display
         #    long-running instructions, i.e., those instructions where
         #    the delay (ts(data_idx+1)-ts(data_idx)) is long.
-        self._block_source_data_idx = np.searchsorted(ts, target_ts, side="right") -1
-        if self._block_source_data_idx < 0:
-            self._block_source_data_idx = 0
+        self._block_source_data_idx = np.searchsorted(ts, target_ts, side="right") - 1
+        self._block_source_data_idx = max(self._block_source_data_idx, 0)
         return True
 
     def get_md_content(self, rows, **env):
         if self._help_screen:
             return MD_HELP_SCREEN, 0
         breakpoints = tuple(
-                str(lineno) for (file_id, lineno) in self._breakpoints
-                if file_id == self._display_file_id)
+            str(lineno)
+            for (file_id, lineno) in self._breakpoints
+            if file_id == self._display_file_id
+        )
         code_flags = "linenos breakpoints=" + ",".join(breakpoints)
-        scroll_index = self._scroll_index   # by default, keep scrolling position
+        scroll_index = self._scroll_index  # by default, keep scrolling position
         if self._display_file_id == self._exec_file_id:
             lineno = self._exec_point.lineno
             code_flags += f" highlight-line={lineno}"
@@ -278,17 +279,17 @@ class TrackExecPlayer(Pager):
                 # check if we should really update this index, or if the old one
                 # is still fine.
                 if not (
-                        self._display_filename == self._old_display_filename and
-                        lineno - self._scroll_index > 5 and
-                        self._scroll_index + rows - lineno > 5
-                   ):
+                    self._display_filename == self._old_display_filename
+                    and lineno - self._scroll_index > 5
+                    and self._scroll_index + rows - lineno > 5
+                ):
                     # the old scrolling position is no longer appropriate, update it
-                    scroll_index = max(0, lineno - (rows//5))
+                    scroll_index = max(0, lineno - (rows // 5))
         source_text = self._reader.read_source_file(self._display_file_id)
-        md_text = (f"""
+        md_text = f"""
 ```python3 {code_flags}
 {source_text}```
-""")
+"""
         return md_text, scroll_index
 
     def _approximate_timestamp(self):
@@ -306,7 +307,8 @@ class TrackExecPlayer(Pager):
             lineno = None
         location_maxlen = cols - len("location: ")
         location = self._reader.short_file_location(
-                self._display_file_id, lineno, location_maxlen)
+            self._display_file_id, lineno, location_maxlen
+        )
         ts = self._timestamp_to_datetime(self._approximate_timestamp()).isoformat(" ")
         if self._is_start_of_trace():
             flag = " [START OF TRACE]"
@@ -317,9 +319,7 @@ class TrackExecPlayer(Pager):
         return f"approx. time: {ts}{flag}\nlocation: {location}"
 
     def get_footer_help_keys(self, **env):
-        return (
-            '"q": quit', '"h": help about all commands'
-        )
+        return ('"q": quit', '"h": help about all commands')
 
     def _suffix_matches(self, prefix, fragment):
         for f in self._reader.filenames:
@@ -338,9 +338,8 @@ class TrackExecPlayer(Pager):
                 self._compl_matches = []
             else:
                 fragment = words[1]
-                prefix = text[:-len(fragment)]
-                self._compl_matches = list(set(
-                    self._suffix_matches(prefix, fragment)))
+                prefix = text[: -len(fragment)]
+                self._compl_matches = list(set(self._suffix_matches(prefix, fragment)))
         # return match indexed by state
         try:
             return self._compl_matches[state]
@@ -350,15 +349,11 @@ class TrackExecPlayer(Pager):
     def handle_keypress(self, c, **env):
         # ignored chars
         if c in "~\x1b[":
-            return
+            return None
         # set default values, update below when relevant
         self.error_message = None
         self._update_scrolling = False
-        exec_cmds = {
-            "n": self._next,
-            "s": self._step,
-            "c": self._continue
-        }
+        exec_cmds = {"n": self._next, "s": self._step, "c": self._continue}
         # <h>: toggle help screen
         if c == "h":
             self._help_screen = not self._help_screen
@@ -368,8 +363,8 @@ class TrackExecPlayer(Pager):
             if not self._help_screen:
                 self._update_scrolling = True
             return Pager.UPDATE_MD_CONTENT_NO_RETURN
-        elif self._help_screen:
-            return  # only <h> allows to quit the help screen
+        if self._help_screen:
+            return None  # only <h> allows to quit the help screen
         # <q>: quit
         if c == "q":
             return Pager.QUIT
@@ -394,16 +389,15 @@ class TrackExecPlayer(Pager):
                 # let the pager update the screen
                 self._update_scrolling = True
                 return Pager.UPDATE_MD_CONTENT_NO_RETURN
-            else:  # failed
-                self._state = state   # restore previous state
+            # failed
+            self._state = state  # restore previous state
         else:
             # full-line commands
             prefill = None
             if c.isalpha() and c.lower() == c:
                 # <b> => prefill "b "; <f> => prefill "f "; etc.
                 prefill = c + " "
-            cmd = self.prompt_command(prefill_text=prefill,
-                                      completer=self).strip()
+            cmd = self.prompt_command(prefill_text=prefill, completer=self).strip()
             if cmd == "":
                 return Pager.UPDATE_MD_CONTENT_NO_RETURN
             cmd_args = cmd.split()
@@ -432,24 +426,24 @@ class TrackExecPlayer(Pager):
                         offset, unit = time_spec[:-1], time_spec[-1]
                         offset = float(offset)
                         offset *= {
-                                "s": SEC_AS_TS,
-                                "m": MIN_AS_TS,
-                                "h": HOUR_AS_TS,
-                                "d": DAY_AS_TS,
+                            "s": SEC_AS_TS,
+                            "m": MIN_AS_TS,
+                            "h": HOUR_AS_TS,
+                            "d": DAY_AS_TS,
                         }[unit]
                         ts = curr_ts + offset
                     else:
                         curr_unix_ts = curr_ts / SEC_AS_TS
-                        if ':' in time_spec:
+                        if ":" in time_spec:
                             # set time
-                            h, m, s = time_spec.split(':')
+                            h, m, s = time_spec.split(":")
                             h, m, s = int(h), int(m), float(s)
                             curr_date = date.fromtimestamp(curr_unix_ts)
                             dt = datetime.combine(curr_date, midnight())
                             dt += timedelta(hours=h, minutes=m, seconds=s)
                         else:
                             # set date
-                            y, m, d = time_spec.split('-')
+                            y, m, d = time_spec.split("-")
                             y, m, d = int(y), int(m), int(d)
                             curr_time = datetime.fromtimestamp(curr_unix_ts).time()
                             selected_date = date(year=y, month=m, day=d)
@@ -464,27 +458,29 @@ class TrackExecPlayer(Pager):
                 elif cmd_args[0] == "f":
                     file_suffix = cmd_args[1]
                     matching_file_ids = [
-                        i for i, f in enumerate(self._reader.filenames)
+                        i
+                        for i, f in enumerate(self._reader.filenames)
                         if f.endswith(file_suffix)
                     ]
                     num_matches = len(matching_file_ids)
                     if num_matches > 1:
                         self.error_message = (
-                            f"Error: {num_matches} different file paths could match.")
+                            f"Error: {num_matches} different file paths could match."
+                        )
                     elif num_matches == 0:
                         self.error_message = (
                             "Error: could not find a matching file path "
-                            "in the exec trace.")
+                            "in the exec trace."
+                        )
                     else:
                         # ok
                         self._explicit_display_file_id = matching_file_ids[0]
                         self.set_scroll_index(0)
                         return Pager.UPDATE_MD_CONTENT_NO_RETURN
             except Exception:
-                pass    # invalid, the default
+                pass  # invalid, the default
             if self.error_message is None:
-                self.error_message = (
-                    f"Invalid command: {repr(cmd)} -- press <h> for help")
+                self.error_message = f"Invalid command: {cmd!r} -- press <h> for help"
         # if we get here, something went wrong
         assert self.error_message is not None
         self._update_scrolling = False
@@ -514,7 +510,7 @@ def TrackExecLogDir(s):
 
 
 class TrackExecPlayerCli(cli.Application):
-    def main(self, trackexec_log_dir : TrackExecLogDir):
+    def main(self, trackexec_log_dir: TrackExecLogDir):
         """Replay WalT server process execution logs"""
         TrackExecPlayer.replay(trackexec_log_dir)
         sys.exit(1)

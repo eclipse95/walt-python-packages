@@ -10,6 +10,7 @@ class WalTStandaloneVirtualNodeSetup(WaltGenericSetup):
     @property
     def package(self):
         import walt.virtual.setup
+
         return files(walt.virtual.setup)
 
     @property

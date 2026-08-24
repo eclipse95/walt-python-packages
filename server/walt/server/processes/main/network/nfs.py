@@ -47,7 +47,7 @@ def generate_persist_exports_file_content(persist_paths):
     return content
 
 
-class NFSExporter(object):
+class NFSExporter:
     def __init__(self):
         self._obsolete_exports = False
 
@@ -56,8 +56,7 @@ class NFSExporter(object):
             path.parent.mkdir()
         if path.exists():
             return path.read_text()
-        else:
-            return ""
+        return ""
 
     def _run_exportfs(self):
         if not succeeds("exportfs -r -f"):

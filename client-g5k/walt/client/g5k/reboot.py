@@ -19,7 +19,7 @@ def reboot_nodes(info, node_names, retries=3):
                 run_cmd_on_site(
                     info,
                     site,
-                    "kareboot3 simple --no-wait -l hard -f -".split(),
+                    ["kareboot3", "simple", "--no-wait", "-l", "hard", "-f", "-"],
                     input="\n".join(site_node_names),
                 )
                 rebooted_node_names += list(site_node_names)

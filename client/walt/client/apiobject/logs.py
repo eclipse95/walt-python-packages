@@ -11,7 +11,7 @@ class APILogsSubModule(APIObjectBase):
         if realtime is False and history is None:
             raise Exception(
                 'At least one of the options "realtime" and "history"'
-                ' must be specified.'
+                " must be specified."
             )
         with silent_server_link() as server:
             if history is not None:

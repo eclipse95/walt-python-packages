@@ -46,7 +46,7 @@ class Filesystem:
         self.wf_response_handler.next()
 
     def _wf_handle_ping_reply_line(self, wf, line, retries, **env):
-        alive = (line == "ok")
+        alive = line == "ok"
         self.wf_response_handler = None
         if not alive:
             # close background process, to force restarting it
@@ -57,7 +57,7 @@ class Filesystem:
                 self.popen = None
                 self.ev_loop.remove_listener(self, should_close=False)
             if retries > 0:
-                wf.update_env(retries=retries-1)
+                wf.update_env(retries=retries - 1)
                 wf.insert_steps([self.wf_ping])
                 wf.next()
                 return
@@ -81,13 +81,13 @@ class Filesystem:
     def wf_get_file_type(self, wf, path, **env):
         self.send_cmd(
             f'if [ -f "{path}" ]; '
-            + 'then echo "f"; '
-            + f'else if [ -d "{path}" ]; '
-            + 'then echo "d"; '
-            + f'else if [ -e "{path}" ]; '
-            + 'then echo "o"; '
-            + 'else echo "m"; '
-            + "fi; fi; fi"
+            'then echo "f"; '
+            f'else if [ -d "{path}" ]; '
+            'then echo "d"; '
+            f'else if [ -e "{path}" ]; '
+            'then echo "o"; '
+            'else echo "m"; '
+            "fi; fi; fi"
         )
         self.wf_response_handler = wf
         wf.insert_steps([self._wf_handle_file_type_reply_line])

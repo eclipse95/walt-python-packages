@@ -11,6 +11,7 @@ class ServerBlockingProcess(EvProcess):
 
     def prepare(self):
         from walt.server.processes.blocking.service import BlockingTasksService
+
         service = BlockingTasksService()
         service.db = self.db
         self.main.configure(service)

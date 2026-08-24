@@ -58,9 +58,9 @@ def generate_table(title, footnote, records, *col_titles):
 
 def user_subsets(res, username):
     # compute user, free and other subsets
-    mask_u = (res.image_owner == username)        # user
-    mask_f = (res.image_owner == "waltplatform")  # free
-    mask_o = ~mask_u & ~mask_f                    # other
+    mask_u = res.image_owner == username  # user
+    mask_f = res.image_owner == "waltplatform"  # free
+    mask_o = ~mask_u & ~mask_f  # other
     return res[mask_u], res[mask_f], res[mask_o]
 
 
@@ -82,13 +82,13 @@ def show(manager, username, show_all, names_only):
     # compute compact res.image name
     res.image = np.char.replace(res.image_name.astype(str), ":latest", "")
     # compute res.clonable_image_link
-    res.clonable_image_link = ("walt:" + res.image_owner + "/" + res.image)
+    res.clonable_image_link = "walt:" + res.image_owner + "/" + res.image
     # compute res.netsetup label
     res.netsetup[res.netsetup_int == NetSetup.LAN] = "LAN"
     res.netsetup[res.netsetup_int == NetSetup.NAT] = "NAT"
     # compute res.booted
     mask_booted = np.isin(res.mac, list(manager.get_booted_macs()))
-    mask_powersave = (res.powersave == 1)
+    mask_powersave = res.powersave == 1
     res.booted[mask_booted] = "yes"
     res.booted[~mask_booted & mask_powersave] = "no (powersave)"
     res.booted[~mask_booted & ~mask_powersave] = "NO"

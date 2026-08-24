@@ -18,8 +18,10 @@ class BaseUnixSocketListener:
             else:
                 send_msg_fds(s, pickle.dumps(resp), (fd,), peer_addr)
         except Exception:
-            print("Failed to send reply to walt-server-httpd (probably down)",
-                  file=sys.stderr)
+            print(
+                "Failed to send reply to walt-server-httpd (probably down)",
+                file=sys.stderr,
+            )
 
     def send_resp(self, s, peer_addr, resp):
         self.send_resp_fd(s, peer_addr, resp, None)
@@ -105,8 +107,10 @@ class FakeTFTPGetFDListener(BaseUnixSocketListener):
 class UnixSocketServer(UnixServer):
     def __init__(self, server):
         UnixServer.__init__(self, UNIX_SERVER_SOCK_PATH)
-        for cls in [FakeTFTPGetFDListener,
-                    VPNEnrollListener,
-                    FileGeneratorListener,
-                    PropertyListener]:
+        for cls in [
+            FakeTFTPGetFDListener,
+            VPNEnrollListener,
+            FileGeneratorListener,
+            PropertyListener,
+        ]:
             self.register_listener_class(req_id=cls.REQ_ID, cls=cls, server=server)

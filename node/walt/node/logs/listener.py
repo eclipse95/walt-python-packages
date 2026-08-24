@@ -9,7 +9,7 @@ ENCODING = sys.stdout.encoding
 WALT_LOGS_FIFO = "/var/lib/walt/logs.fifo"
 
 
-class LogsFifoListener(object):
+class LogsFifoListener:
     def __init__(self):
         self.fifo = open_readable_fifo(WALT_LOGS_FIFO)
         self.conn_cache = LogsConnCache()

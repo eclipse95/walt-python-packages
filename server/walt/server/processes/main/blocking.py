@@ -1,13 +1,14 @@
 import functools
+
 from walt.server.process import RPCProcessConnector, RPCService
 from walt.server.processes.main.images.tools import handle_missing_credentials
 
 
 class BlockingTasksManager(RPCProcessConnector):
     def __init__(self):
-        super().__init__(local_context=False,
-                         label="main-to-blocking",
-                         serialize_reqs=True)  # send tasks to blocking 1 by 1
+        super().__init__(
+            local_context=False, label="main-to-blocking", serialize_reqs=True
+        )  # send tasks to blocking 1 by 1
 
     def configure(self, server):
         RPCProcessConnector.configure(self, RPCService(server=server))
@@ -51,11 +52,13 @@ class BlockingTasksManager(RPCProcessConnector):
                 result_cb((True,))
             else:
                 result_cb((False, result[1]))  # result[1]: failure message
+
         if requester is None:
             blocking_func = functools.partial(self._anon_pull_image, image_fullname)
         else:
             blocking_func = functools.partial(
-                    self._auth_pull_image, requester, image_fullname)
+                self._auth_pull_image, requester, image_fullname
+            )
         handle_missing_credentials(requester, blocking_func, callback)
 
     def registry_login(self, requester, result_cb, *args, **kwargs):
@@ -73,8 +76,11 @@ class BlockingTasksManager(RPCProcessConnector):
         self.session(requester).do_async.run_shell_cmd(cmd, **kwargs).then(result_cb)
 
     def update_default_images(self, requester, cb, *args, **kwargs):
-        return self.session(requester).do_async.update_default_images(
-                *args, **kwargs).then(cb)
+        return (
+            self.session(requester)
+            .do_async.update_default_images(*args, **kwargs)
+            .then(cb)
+        )
 
     def report_lldp_neighbor(self, *args, **kwargs):
         self.session(None).do_async.report_lldp_neighbor(*args, **kwargs)

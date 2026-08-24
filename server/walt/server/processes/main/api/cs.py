@@ -4,7 +4,7 @@ from walt.common.api import api, api_expose_method
 from walt.common.tools import format_image_fullname
 from walt.server.processes.main.apisession import APISession
 from walt.server.processes.main.images.image import validate_image_name
-from walt.server.tools import np_record_to_dict, np_recarray_to_tuple_of_dicts
+from walt.server.tools import np_recarray_to_tuple_of_dicts, np_record_to_dict
 
 # Client -> Server API (thus the name CSAPI)
 # Provides remote calls performed from a client to the server.
@@ -14,9 +14,7 @@ from walt.server.tools import np_record_to_dict, np_recarray_to_tuple_of_dicts
 class CSAPI(APISession):
     @api_expose_method
     def device_rescan(self, context, device_set):
-        context.server.device_rescan(
-            context.requester, context.task, device_set
-        )
+        context.server.device_rescan(context.requester, context.task, device_set)
 
     @api_expose_method
     def device_tree(self, context, show_all):
@@ -100,8 +98,9 @@ class CSAPI(APISession):
         return context.devices.develop_device_set(context.requester, device_set)
 
     @api_expose_method
-    def reboot_nodes(self, context, node_set,
-                     hard_only=False, cause="reboot requested"):
+    def reboot_nodes(
+        self, context, node_set, hard_only=False, cause="reboot requested"
+    ):
         return context.nodes.reboot_node_set(
             context.requester, context.task, node_set, hard_only, cause
         )
@@ -109,7 +108,8 @@ class CSAPI(APISession):
     @api_expose_method
     def validate_node_cp(self, context, src, dst):
         return context.server.validate_cp(
-                context.task, context.requester, "node", src, dst)
+            context.task, context.requester, "node", src, dst
+        )
 
     @api_expose_method
     def node_cp_to_booted_image(self, context, node_name, **path_info):
@@ -241,8 +241,9 @@ class CSAPI(APISession):
 
     @api_expose_method
     def validate_image_cp(self, context, src, dst):
-        return context.server.validate_cp(context.task,
-                context.requester, "image", src, dst)
+        return context.server.validate_cp(
+            context.task, context.requester, "image", src, dst
+        )
 
     @api_expose_method
     def squash_image(self, context, image_name, confirmed):
@@ -290,20 +291,21 @@ class CSAPI(APISession):
 
     @api_expose_method
     def set_port_config(self, context, switch_name, port_id, configuration):
-        context.server.port_settings.set_config(context.requester,
-                switch_name, port_id, configuration)
+        context.server.port_settings.set_config(
+            context.requester, switch_name, port_id, configuration
+        )
 
     @api_expose_method
     def get_port_config(self, context, switch_name, port_id):
-        context.server.port_settings.get_config(context.requester,
-                switch_name, port_id)
+        context.server.port_settings.get_config(context.requester, switch_name, port_id)
 
     @api_expose_method
     def get_device_config_data(self, context, device_set):
         return np_recarray_to_tuple_of_dicts(
             context.server.settings.get_device_config_data(
                 context.requester, device_set
-        ))
+            )
+        )
 
     @api_expose_method
     def shell_autocomplete(self, context, username, argv, debug=False):
@@ -334,7 +336,8 @@ class CSAPI(APISession):
     def run_image_build_from_node_diff(self, context, session_id):
         session = self.get_session_object(session_id)
         return session.run_image_build_from_node_diff(
-                context.requester, context.server, context.task)
+            context.requester, context.server, context.task
+        )
 
     @api_expose_method
     def finalize_image_build_session(self, context, session_id):

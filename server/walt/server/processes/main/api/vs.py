@@ -15,5 +15,5 @@ class VSAPI(APISession):
     @api_expose_method
     def get_device_info(self, context, device_mac):
         return np_record_to_dict(
-                context.server.devices.get_device_info(
-                    requester=None, mac=device_mac))
+            context.server.devices.get_device_info(requester=None, mac=device_mac)
+        )

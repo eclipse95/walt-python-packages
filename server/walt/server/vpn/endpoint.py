@@ -3,9 +3,9 @@ import socket
 import sys
 
 from walt.common.unix import bind_to_random_sockname, recv_msg_fds
-from walt.server.vpn.const import VPN_SOCK_PATH
 from walt.server.ext._c_ext.lib import _vpn_endpoint_transmission_loop
 from walt.server.tools import ip_in_walt_network
+from walt.server.vpn.const import VPN_SOCK_PATH
 
 
 def run():

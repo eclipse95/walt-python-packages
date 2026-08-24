@@ -1,7 +1,7 @@
 from walt.common.formatting import format_sentence
 from walt.server.processes.blocking.registries import (
-    get_registry_clients,
     MissingRegistryCredentials,
+    get_registry_clients,
 )
 
 
@@ -20,9 +20,9 @@ def pull_image(requester, server, image_fullname):
             continue
         try:
             client.pull(requester, server, image_fullname)
-            return ('OK',)
+            return ("OK",)
         except MissingRegistryCredentials as e:
-            return ('MISSING_REGISTRY_CREDENTIALS', e.registry_label)
+            return ("MISSING_REGISTRY_CREDENTIALS", e.registry_label)
         except Exception:
             failed.append(f"'{label}'")
     # if we are here, then nothing worked
@@ -37,4 +37,4 @@ def pull_image(requester, server, image_fullname):
                 list_type="or",
             )
         )
-    return ('FAILED', "\n".join(issues))
+    return ("FAILED", "\n".join(issues))

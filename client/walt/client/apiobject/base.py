@@ -51,15 +51,14 @@ class APICommentedString(str):
 def short_repr(obj):
     if isinstance(obj, APIObjectBase):
         return obj.__repr__(level=1)
-    elif isinstance(obj, list):
+    if isinstance(obj, list):
         return "[" + ", ".join(short_repr(elem) for elem in obj) + "]"
-    elif isinstance(obj, Exception):
+    if isinstance(obj, Exception):
         return "<" + str(obj) + ">"
-    else:
-        res = repr(obj)
-        if len(res) > 70:
-            res = res[:67] + "..."
-        return res
+    res = repr(obj)
+    if len(res) > 70:
+        res = res[:67] + "..."
+    return res
 
 
 def get_ro_rw_attrs(obj):
@@ -165,8 +164,7 @@ def get_methods_desc(obj, excluded_attrs):
 def get_preview_desc(obj):
     if hasattr(obj, "_preview"):
         return "\n  preview:\n  " + "\n  ".join(obj._preview.splitlines()) + "\n"
-    else:
-        return ""
+    return ""
 
 
 def get_subitem_accessor(k):
@@ -209,8 +207,7 @@ class APIObjectBase:
     def __dynamic_doc__(self):  # overwrite in subclass if needed
         if hasattr(self, "__doc__"):
             return self.__doc__
-        else:
-            return self.__class__.__doc__
+        return self.__class__.__doc__
 
     def __doc_attrs__(self):  # overwrite in subclass if needed
         if len(self.__volatile_attrs__()) > 0:
@@ -243,7 +240,7 @@ class APIObjectBase:
                 if len(short_desc) > MAX_SHORT_DESC_LEVEL_1:
                     short_desc = short_desc[: (MAX_SHORT_DESC_LEVEL_1 - 1)] + ELLIPSIS
                 return "<" + short_desc + ">"
-            elif level == 0:
+            if level == 0:
                 attr_names, attr_desc = get_attrs_desc(self)
                 res = "< -- " + short_desc + " --\n"
                 res += attr_desc
@@ -271,8 +268,7 @@ class APIObjectBase:
         info = self.__buffered_get_info__()
         if attr in info:
             return info[attr]
-        else:
-            raise AttributeError('No such attribute "%s"' % attr)
+        raise AttributeError('No such attribute "%s"' % attr)
 
     def __setattr__(self, attr, value):
         if attr.startswith("_"):
@@ -284,11 +280,10 @@ class APIObjectBase:
             attr_is_ro = is_ro_prop(self, attr)
         else:
             ro_names = get_ro_names(self)
-            attr_is_ro = (attr in ro_names)
+            attr_is_ro = attr in ro_names
         if attr_is_ro:
             raise AttributeError('Cannot write read-only attribute "%s"' % attr)
-        else:
-            return super().__setattr__(attr, value)
+        return super().__setattr__(attr, value)
 
     def __dir__(self):
         attrs = super().__dir__()
@@ -370,8 +365,7 @@ class APIFilteredSet:
     def get(self, k, default=None):
         if k in self._names:
             return self[k]
-        else:
-            return default
+        return default
 
     def __delitem__(self, k):
         del self._object_cache[k]
@@ -411,23 +405,23 @@ def APIObjectRegistryClass(d, doc=None, show_size=True):
             return k in d.names() or k in d.values()
 
         def items(self):
-            "Iterate over key & value pairs this set contains"
+            """Iterate over key & value pairs this set contains"""
             return d.items()
 
         def keys(self):
-            "Iterate over keys this set contains"
+            """Iterate over keys this set contains"""
             return d.names()
 
         def values(self):
-            "Iterate over values this set contains"
+            """Iterate over values this set contains"""
             return d.values()
 
         def __len__(self):
-            "Indicate how many items this set contains"
+            """Indicate how many items this set contains"""
             return len(d)
 
         def get(self, k, default=None):
-            "Return item specified or default value if missing"
+            """Return item specified or default value if missing"""
             return d.get(k, default)
 
         @property
@@ -540,8 +534,10 @@ class APISetOfItemsClassFactory:
 
             def __dynamic_method_doc__(self, method):
                 if method.__name__ == "filter":
-                    return (f"Return the subset of {item_cls_label}s"
-                            " matching the given attributes")
+                    return (
+                        f"Return the subset of {item_cls_label}s"
+                        " matching the given attributes"
+                    )
 
             def filter(self, **kwargs):
                 new_set = item_set_factory.create(set())

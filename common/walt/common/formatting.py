@@ -43,8 +43,7 @@ def format_sentence(
 
 
 def format_sentence_about_nodes(sentence, nodes):
-    """
-    example 1:
+    """example 1:
         input: sentence = '%s seems(seem) dead.', nodes = ['rpi0']
         output: 'Node rpi0 seems dead.'
     example 2:
@@ -58,8 +57,7 @@ def format_sentence_about_nodes(sentence, nodes):
 def as_string(item):
     if item is None:
         return ""
-    else:
-        return str(item)
+    return str(item)
 
 
 def columnate_sanitize_data(tabular_data):
@@ -80,15 +78,18 @@ def char_len(line):
 def pad_right(text, text_length, width):
     return text + (width - text_length) * " "
 
+
 def pad_left(text, text_length, width):
     return (width - text_length) * " " + text
+
 
 def columnate_format_row(row, row_lengths, colwidths, padding):
     col_spacing = " " * COLUMNATE_SPACING
     return col_spacing.join(
         pad_func(text, text_length, width)
-        for text, text_length, width, pad_func in
-            zip(row, row_lengths, colwidths, padding)
+        for text, text_length, width, pad_func in zip(
+            row, row_lengths, colwidths, padding
+        )
     )
 
 
@@ -169,8 +170,8 @@ attrs = ["years", "months", "days", "hours", "minutes", "seconds"]
 
 def human_readable_delay(seconds):
     from dateutil.relativedelta import relativedelta
-    if seconds < 1:
-        seconds = 1
+
+    seconds = max(seconds, 1)
     delta = relativedelta(seconds=seconds)
     items = []
     for attr in attrs:
@@ -206,6 +207,7 @@ BOX_CHARS = {
 
 def framed(title, section):
     import os
+
     box_c = BOX_CHARS[os.isatty(1)]
     lines = [""] + section.splitlines()
     lengths = [char_len(line) for line in lines]
@@ -238,6 +240,7 @@ def framed(title, section):
 
 def highlight(text):
     import os
+
     if not os.isatty(1):
         return text
     lines = text.strip().splitlines()

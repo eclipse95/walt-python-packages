@@ -1,9 +1,4 @@
-from includes.common import (
-    define_test,
-    test_create_vnode,
-    get_vnode,
-    test_json_request
-)
+from includes.common import define_test, get_vnode, test_create_vnode, test_json_request
 
 
 @define_test("web api/v1/nodes")
@@ -11,11 +6,11 @@ def test_api_nodes():
     vnode = test_create_vnode()
     json_nodes = test_json_request("nodes")
     assert len(json_nodes) > 0
-    filtered_json_nodes = [ d for d in json_nodes if d.get("name", "") == vnode.name ]
+    filtered_json_nodes = [d for d in json_nodes if d.get("name", "") == vnode.name]
     assert len(filtered_json_nodes) == 1
     json_vnode = filtered_json_nodes[0]
     assert len(json_vnode.keys()) == 8
-    for k in ('name', 'model', 'virtual', 'booted', 'ip', 'mac'):
+    for k in ("name", "model", "virtual", "booted", "ip", "mac"):
         assert json_vnode.get(k, None) == getattr(vnode, k, None)
     assert json_vnode.get("image", None) == vnode.image.fullname
     json_vnode_config = json_vnode.get("config", {})

@@ -38,14 +38,13 @@ class ProgressMessageProcess(Process):
                     # are done and stop
                     self.print_status("done", "\n")
                     break
-                else:
-                    # print the provided msg and continue
-                    out = sys.stdout if req[0] == 1 else sys.stderr
-                    if isinstance(req[1], str):
-                        out.write("%s\n" % req[1])
-                    elif isinstance(req[1], bytes):
-                        out.buffer.write(req[1])
-                    out.flush()
+                # print the provided msg and continue
+                out = sys.stdout if req[0] == 1 else sys.stderr
+                if isinstance(req[1], str):
+                    out.write("%s\n" % req[1])
+                elif isinstance(req[1], bytes):
+                    out.buffer.write(req[1])
+                out.flush()
         except KeyboardInterrupt:
             self.queue.put(0)
 

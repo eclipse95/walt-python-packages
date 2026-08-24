@@ -1,6 +1,5 @@
-"""
-WalT client shell autocompletion helper.
-"""
+"""WalT client shell autocompletion helper."""
+
 import sys
 
 from walt.client.config import conf

@@ -139,12 +139,14 @@ class RegistryClientBase:
 
     async def async_get_labels(self, requester, image_fullname):
         labels, created_ts = await self.async_get_labels_and_created_ts(
-                requester, image_fullname)
+            requester, image_fullname
+        )
         return labels
 
     async def async_get_created_ts(self, requester, image_fullname):
         labels, created_ts = await self.async_get_labels_and_created_ts(
-                requester, image_fullname)
+            requester, image_fullname
+        )
         return created_ts
 
     async def async_get_labels_and_created_ts(self, requester, image_fullname):
@@ -169,8 +171,7 @@ class SkopeoRegistryClient(RegistryClientBase):
                 config = {}
             if "Created" not in config:
                 raise Exception(f"{fullname}: unknown image format.")
-            else:
-                return config
+            return config
         raise Exception("Failed to inspect remote image: " + fullname)
 
     async def async_get_labels_and_created_ts(self, requester, fullname):
@@ -325,6 +326,7 @@ class DockerRegistryV2Client(SkopeoRegistryClient):
 # - The user name used for authentication is not used in image URLs.
 # - _catalog is not available at the root (v2/_catalog), only at
 #   v2/<repository>/_catalog
+
 
 class JFrogRegistryClient(DockerRegistryV2Client):
     def __init__(self, repository, **kwargs):

@@ -6,8 +6,8 @@ from walt.server.processes.blocking.images.metadata import (
     update_user_metadata_for_image,
 )
 from walt.server.processes.blocking.registries import (
-    get_registry_client,
     MissingRegistryCredentials,
+    get_registry_client,
 )
 
 if typing.TYPE_CHECKING:
@@ -28,16 +28,14 @@ def publish(requester, server: Server, registry_label, image_fullname, **kwargs)
                     requester, registry, image_fullname, labels
                 )
     except MissingRegistryCredentials as e:
-        return ('MISSING_REGISTRY_CREDENTIALS', e.registry_label)
+        return ("MISSING_REGISTRY_CREDENTIALS", e.registry_label)
     except Exception:
         requester.stderr.write(
             f"Failed to communicate with {registry_label} registry. Aborted.\n"
         )
-        return ('FAILED',)
+        return ("FAILED",)
     if success:
         clone_url = registry.get_origin_clone_url(requester, image_fullname)
-        if clone_url.endswith(":latest"):
-            clone_url = clone_url[:-7]
-        return ('OK', clone_url)
-    else:
-        return ('FAILED',)
+        clone_url = clone_url.removesuffix(":latest")
+        return ("OK", clone_url)
+    return ("FAILED",)

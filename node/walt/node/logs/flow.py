@@ -6,7 +6,7 @@ from walt.common.tools import remove_non_utf8
 WALT_LOG_CAT_BINARY = subprocess.check_output("which walt-log-cat", shell=True).strip()
 
 
-class LogsFlowToServer(object):
+class LogsFlowToServer:
     def __init__(self, stream_name):
         self.popen = subprocess.Popen(
             [WALT_LOG_CAT_BINARY, "--ts", stream_name], stdin=subprocess.PIPE

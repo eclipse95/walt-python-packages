@@ -56,9 +56,5 @@ class FilesystemsExporter:
         wf.next()
 
     def update_persist_exports(self, cleanup=False, **env):
-        wf = Workflow(
-            [self.wf_update_persist_exports],
-            cleanup=cleanup,
-            **env
-        )
+        wf = Workflow([self.wf_update_persist_exports], cleanup=cleanup, **env)
         wf.run()

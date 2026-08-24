@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 import functools
 import re
+
 from snimpy import snmp
 
 from walt.server.diskcache import DISK_CACHE
 
 
-class SNMPBitField(object):
+class SNMPBitField:
     def __init__(self, snmpfield, shift=0):
         hex_string = snmpfield.encode("hex")
         self.bitlength = len(hex_string) * 4
@@ -51,12 +52,11 @@ def decode_ipv4_address(octet_string):
 def decode_mac_address(value):
     if value.__class__.__name__ == "OctetString":
         return ":".join(re.findall("..", value.hex()))
-    elif value.__class__.__name__ == "String":
+    if value.__class__.__name__ == "String":
         # input value may have high order zero chars ommitted,
         # e.g. 0:d:b9:45:f8:90, let's restore them
         return ":".join("%02x" % int(byte, base=16) for byte in value.split(":"))
-    else:
-        raise Exception(f"Could not decode {value} as a mac address")
+    raise Exception(f"Could not decode {value} as a mac address")
 
 
 def enum_label(enum):
@@ -138,7 +138,7 @@ class VariantsSet:
 # variant-specific code is executed.
 
 
-class VariantProxy(object):
+class VariantProxy:
     def __init__(self, snmp_proxy, host, variants):
         self.unsafe_proxy = snmp_proxy
         self.variants = variants

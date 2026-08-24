@@ -4,15 +4,13 @@ DISK_TEMPLATES = set(("none", "ext4", "fat32", "hybrid-boot-v", "hybrid-boot-p")
 
 
 def parse_vnode_disks_value(setting_value):
-    if setting_value == 'none':
+    if setting_value == "none":
         return (True, [])
     # check global format <disk>[,<disk>[...]]
     # with each <disk> of the form '<capacity>' or
     # '<capacity>[<options>]'
     if (
-        re.match(
-            r"^\d+[GT](\[[^\]]*\])?(,\d+[GT](\[[^\]]*\])?)*$", setting_value
-        )
+        re.match(r"^\d+[GT](\[[^\]]*\])?(,\d+[GT](\[[^\]]*\])?)*$", setting_value)
         is None
     ):
         return False, f"Could not parse disks value '{setting_value}'."
@@ -20,15 +18,15 @@ def parse_vnode_disks_value(setting_value):
     _disks = []
     for disk in setting_value.split(","):
         template_name = "none"  # default template
-        if '[' in disk:
-            capacity, options = disk[:-1].split('[')
-            for option in options.split(','):
+        if "[" in disk:
+            capacity, options = disk[:-1].split("[")
+            for option in options.split(","):
                 if len(option) > 9 and option[:9] == "template=":
                     template_name = option[9:]
                     if template_name not in DISK_TEMPLATES:
                         return (
                             False,
-                            f"Disk template must be one of: {' '.join(DISK_TEMPLATES)}"
+                            f"Disk template must be one of: {' '.join(DISK_TEMPLATES)}",
                         )
                 else:
                     return (

@@ -21,9 +21,11 @@ MIN_DELAY_BETWEEN_SERVICE_RESTARTS = 5
 # filesystem will fail).
 def async_systemd_service_restart_cmd(systemd_service_name, allow_reload=False):
     systemd_op = "ReloadOrRestartUnit" if allow_reload else "RestartUnit"
-    return ("busctl call org.freedesktop.systemd1 /org/freedesktop/systemd1 "
-            f"org.freedesktop.systemd1.Manager {systemd_op} "
-            f"ss {systemd_service_name} replace")
+    return (
+        "busctl call org.freedesktop.systemd1 /org/freedesktop/systemd1 "
+        f"org.freedesktop.systemd1.Manager {systemd_op} "
+        f"ss {systemd_service_name} replace"
+    )
 
 
 class ServiceRestarter:
@@ -57,26 +59,23 @@ class ServiceRestarter:
             # ok done
             self.restarting = False
             return
-        else:
-            next_service_version = self.config_version
-            print(
-                f"{self.short_service_name} restarting with version"
-                f" {next_service_version}."
-            )
+        next_service_version = self.config_version
+        print(
+            f"{self.short_service_name} restarting with version"
+            f" {next_service_version}."
+        )
 
-            def callback(retcode):
-                # update service version
-                prev_service_version = self.service_version
-                self.service_version = next_service_version
-                # compute time of next call
-                target_ts = time() + MIN_DELAY_BETWEEN_SERVICE_RESTARTS
-                # plan event to be recalled at this time
-                self.ev_loop.plan_event(
-                    ts=target_ts, callback=self.restart_service_loop
-                )
-                # call user provided callbacks
-                for v in range(prev_service_version + 1, next_service_version + 1):
-                    for cb in self.callbacks.pop(v, ()):
-                        cb()
+        def callback(retcode):
+            # update service version
+            prev_service_version = self.service_version
+            self.service_version = next_service_version
+            # compute time of next call
+            target_ts = time() + MIN_DELAY_BETWEEN_SERVICE_RESTARTS
+            # plan event to be recalled at this time
+            self.ev_loop.plan_event(ts=target_ts, callback=self.restart_service_loop)
+            # call user provided callbacks
+            for v in range(prev_service_version + 1, next_service_version + 1):
+                for cb in self.callbacks.pop(v, ()):
+                    cb()
 
-            self.ev_loop.do(self.restart_cmd, callback)
+        self.ev_loop.do(self.restart_cmd, callback)

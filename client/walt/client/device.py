@@ -1,4 +1,5 @@
 from plumbum import cli
+
 from walt.client.application import WalTApplication, WalTCategoryApplication
 from walt.client.expose import TCPExposer
 from walt.client.interactive import run_device_ping, run_device_shell
@@ -6,10 +7,10 @@ from walt.client.link import ClientToServerLink
 from walt.client.types import (
     DEVICE,
     DEVICE_CONFIG_PARAM,
+    PORT_CONFIG_PARAM,
     RESCAN_SET_OF_DEVICES,
     SET_OF_DEVICES,
     SWITCH,
-    PORT_CONFIG_PARAM,
 )
 
 
@@ -65,9 +66,7 @@ class WalTDeviceShell(WalTApplication):
     """run an interactive ssh session to a device"""
 
     ORDERING = 2
-    user = cli.SwitchAttr(
-        "--user", str, argname="USER", help="""SSH user name"""
-    )
+    user = cli.SwitchAttr("--user", str, argname="USER", help="""SSH user name""")
 
     def main(self, device_name: DEVICE):
         with ClientToServerLink() as server:
@@ -136,8 +135,12 @@ class WalTDevicePortConfig(WalTApplication):
 
     ORDERING = 10
 
-    def main(self, switch_name: SWITCH, port_id: int = None,
-             *configuration: PORT_CONFIG_PARAM):
+    def main(
+        self,
+        switch_name: SWITCH,
+        port_id: int = None,
+        *configuration: PORT_CONFIG_PARAM
+    ):
         with ClientToServerLink() as server:
             if len(configuration) > 0:
                 server.set_port_config(switch_name, port_id, configuration)
@@ -190,7 +193,7 @@ class WalTDeviceForget(WalTApplication):
                 logs_cnt = server.count_logs(
                     history=(None, None),
                     issuers=set([device_name]),
-                    exclude_consoles=True
+                    exclude_consoles=True,
                 )
                 if logs_cnt > 0:
                     print(

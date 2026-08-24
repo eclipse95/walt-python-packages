@@ -2,6 +2,7 @@ import sys
 from datetime import datetime
 
 from plumbum.cli.terminal import prompt
+
 from walt.client.g5k.recipes.const import SCHEDULE_DESC
 from walt.client.g5k.recipes.printer import print_recipe
 from walt.client.g5k.recipes.tools import get_total_node_count
@@ -88,11 +89,14 @@ def validate_walltime(wt):
         elems = tuple(int(e) for e in wt.split(":"))
         elems += (0,) * (3 - len(elems))
         hours, minutes, seconds = elems
-        if hours < 0 or minutes < 0 or seconds < 0:
-            valid = False
-        elif minutes > 59 or seconds > 59:
-            valid = False
-        elif elems == (0, 0, 0):
+        if (
+            hours < 0
+            or minutes < 0
+            or seconds < 0
+            or minutes > 59
+            or seconds > 59
+            or elems == (0, 0, 0)
+        ):
             valid = False
     except Exception:
         valid = False

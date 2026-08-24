@@ -1,4 +1,5 @@
 from plumbum import cli
+
 from walt.client.application import WalTApplication, WalTCategoryApplication
 from walt.client.interactive import run_sql_prompt
 from walt.client.link import ClientToServerLink
@@ -67,8 +68,6 @@ class WalTUpdateHubMeta(WalTApplication):
 @WalTAdvanced.subcommand("rescan-hub-account")
 class WalTRescanHubAccount(WalTUpdateHubMeta):
     """alias to 'update-hub-meta' subcommand"""
-
-    pass
 
 
 @WalTAdvanced.subcommand("dump-bash-autocomplete")

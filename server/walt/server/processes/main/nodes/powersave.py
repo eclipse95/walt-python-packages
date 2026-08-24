@@ -56,7 +56,8 @@ class PowersaveManager:
             self._plan_check()  # plan next one
         else:
             to_be_turned_off = self.server.devices.get_multiple_device_info_for_macs(
-                    macs_to_be_turned_off, include_connectivity=True)
+                macs_to_be_turned_off, include_connectivity=True
+            )
             wf = Workflow(
                 [
                     self._wf_toggle_power_on_nodes,
@@ -85,18 +86,24 @@ class PowersaveManager:
         wf.update_env(poe_toggle_nodes=nodes_ok)
         if len(nodes_ok) > 0:
             wf.insert_steps([self.server.poe.wf_nodes_set_poe])
-            wf.update_env(nodes=nodes_ok,
-                          poe_status=poe_toggle_value,
-                          reason="powersave")
+            wf.update_env(
+                nodes=nodes_ok, poe_status=poe_toggle_value, reason="powersave"
+            )
             wf.next()
         else:
-            wf.update_env(nodes_ok=poe_toggle_nodes[:0],  # none
-                          poe_errors={})
+            wf.update_env(nodes_ok=poe_toggle_nodes[:0], poe_errors={})  # none
             wf.next()
 
-    def _wf_after_toggle_power_on_nodes(self, wf, nodes_ok, poe_errors,
-                                        poe_toggle_nodes, poe_toggle_value,
-                                        requester, **env):
+    def _wf_after_toggle_power_on_nodes(
+        self,
+        wf,
+        nodes_ok,
+        poe_errors,
+        poe_toggle_nodes,
+        poe_toggle_value,
+        requester,
+        **env,
+    ):
         if len(poe_errors) > 0:
             verb = "reactivate" if poe_toggle_value is True else "turn off"
             node_per_name = {n.name: n for n in poe_toggle_nodes}
@@ -114,14 +121,15 @@ class PowersaveManager:
                     requester.stderr.write(f"{sentence}\n")
                 else:
                     self.server.logs.platform_log(
-                            "powersave.error", line=sentence, error=True)
+                        "powersave.error", line=sentence, error=True
+                    )
         if len(nodes_ok) > 0:
             if poe_toggle_value is True:
                 self.server.nodes.record_nodes_boot_start(nodes_ok)
             else:
                 self.server.nodes.change_nodes_bootup_status(
-                    nodes=nodes_ok, booted=False,
-                    cause="powersave", method="PoE")
+                    nodes=nodes_ok, booted=False, cause="powersave", method="PoE"
+                )
         self._plan_check()
         wf.next()
 

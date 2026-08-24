@@ -1,30 +1,31 @@
-import aiohttp
 import asyncio
-import dns.resolver
 import socket
 import subprocess
 import sys
 import time
-
-from aiohttp import web
 from copy import deepcopy
 from pathlib import Path
+
+import aiohttp
+import dns.resolver
+from aiohttp import web
 from plumbum.cli.terminal import prompt
-from walt.doc.md import display_doc
+
 from walt.common.formatting import columnate, framed, highlight
 from walt.common.term import (
-        alternate_screen_buffer,
-        choose,
-        clear_screen,
-        wait_for_large_enough_terminal,
+    alternate_screen_buffer,
+    choose,
+    clear_screen,
+    wait_for_large_enough_terminal,
 )
 from walt.common.tools import chown_tree, do
+from walt.doc.md import display_doc
 from walt.server.vpn.const import (
-        VPN_SERVER_PATH,
-        VPN_ENDPOINT_PATH,
-        VPN_CA_KEY,
-        VPN_CA_KEY_PUB,
-        VPN_SERVER_KRL,
+    VPN_CA_KEY,
+    VPN_CA_KEY_PUB,
+    VPN_ENDPOINT_PATH,
+    VPN_SERVER_KRL,
+    VPN_SERVER_PATH,
 )
 
 EDITOR_TOP_MESSAGE = """\
@@ -70,6 +71,7 @@ cert-authority,restrict,command="walt-server-vpn-endpoint" %(ca_pub_key)s
 SSHD_CONFIG_DIR = Path("/etc/ssh/sshd_config.d")
 SSHD_CONFIG_WALT = SSHD_CONFIG_DIR / "walt.conf"
 
+
 # VPN entrypoint test functions
 # -----------------------------
 async def async_client_test_http_entrypoint(http_entrypoint):
@@ -107,7 +109,7 @@ async def async_get_fqdn(request):
 async def async_test_http_entrypoint(http_entrypoint):
     # start a mini web app in async mode
     app = web.Application()
-    app.add_routes([web.get('/walt-vpn/server', async_get_fqdn)])
+    app.add_routes([web.get("/walt-vpn/server", async_get_fqdn)])
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, port=80)
@@ -124,16 +126,15 @@ def test_http_entrypoint(http_entrypoint):
     if res[0]:
         print("OK.")
         return True
-    else:
-        print("Failed: " + res[1])
-        print("Please verify your entry, and the configuration of this web server.")
-        return False
+    print("Failed: " + res[1])
+    print("Please verify your entry, and the configuration of this web server.")
+    return False
 
 
 def test_ssh_entrypoint(ssh_entrypoint):
     args = ["walt-server-vpn-test-ssh-entrypoint", ssh_entrypoint]
     result = subprocess.run(args)
-    return (result.returncode == 0)
+    return result.returncode == 0
 
 
 def validate_ip_or_hostname(x):
@@ -163,52 +164,47 @@ def prompt_ssh_entrypoint():
 
 def prompt_proto_entrypoint(proto):
     value = prompt(
-        f"Please indicate the IP or hostname of the {proto} entrypoint:",
-        type=str
+        f"Please indicate the IP or hostname of the {proto} entrypoint:", type=str
     )
     if not validate_ip_or_hostname(value):
         return ("KO-RETRY",)
-    else:
-        test_function = EP_TEST_FUNCTIONS[proto]
-        if not test_function(value):
-            return ("KO-RETRY",)
+    test_function = EP_TEST_FUNCTIONS[proto]
+    if not test_function(value):
+        return ("KO-RETRY",)
     return ("OK", value)
 
 
 def prompt_boot_mode():
     print(EXPLAIN_BOOT_MODE)
     value = choose(
-            "Please indicate the boot mode of VPN-capable nodes:",
-            ["permissive", "enforced"],
-            allow_ctrl_c=True,
+        "Please indicate the boot mode of VPN-capable nodes:",
+        ["permissive", "enforced"],
+        allow_ctrl_c=True,
     )
     if value is None:
         return ("KO-ABORT",)
-    else:
-        print("OK.")
-        return ("OK", value)
+    print("OK.")
+    return ("OK", value)
 
 
 # pretty printing vpnconf
 # -----------------------
 
-CONF_ENTRIES_ENABLED = { "ssh-entrypoint": {
-                             "label": "SSH entrypoint",
-                             "prompt-function": prompt_ssh_entrypoint,
-                         },
-                         "http-entrypoint": {
-                             "label": "HTTP entrypoint",
-                             "prompt-function": prompt_http_entrypoint,
-                         },
-                         "boot-mode": {
-                             "label": "VPN boot mode",
-                             "prompt-function": prompt_boot_mode,
-                         },
-                       }
-LABEL_PER_KEY_ENABLED = {
-        k: info["label"]
-        for k, info in CONF_ENTRIES_ENABLED.items()
+CONF_ENTRIES_ENABLED = {
+    "ssh-entrypoint": {
+        "label": "SSH entrypoint",
+        "prompt-function": prompt_ssh_entrypoint,
+    },
+    "http-entrypoint": {
+        "label": "HTTP entrypoint",
+        "prompt-function": prompt_http_entrypoint,
+    },
+    "boot-mode": {
+        "label": "VPN boot mode",
+        "prompt-function": prompt_boot_mode,
+    },
 }
+LABEL_PER_KEY_ENABLED = {k: info["label"] for k, info in CONF_ENTRIES_ENABLED.items()}
 
 
 def pprinted_value(vpnconf, k):
@@ -243,13 +239,12 @@ def print_vpnconf_status(context, vpnconf):
     if vpnconf_is_complete(vpnconf):
         print(s + "OK")
     else:
-        print(
-            s + highlight("incomplete")
-        )
+        print(s + highlight("incomplete"))
 
 
 # main menu
 # ---------
+
 
 def menu_info(context, vpnconf):
     options = {}
@@ -294,13 +289,12 @@ def define_vpn_property(context, vpnconf, k):
                 print("Note: type ctrl-C to abort.")
                 print()
                 continue
-            elif res[0] == "KO-ABORT":
+            if res[0] == "KO-ABORT":
                 raise KeyboardInterrupt
-            else:
-                assert res[0] == "OK"
-                time.sleep(2)
-                vpnconf[k] = res[1]  # validate the change
-                return
+            assert res[0] == "OK"
+            time.sleep(2)
+            vpnconf[k] = res[1]  # validate the change
+            return
         except KeyboardInterrupt:
             print()
             print("Aborted.")
@@ -308,7 +302,7 @@ def define_vpn_property(context, vpnconf, k):
 
 
 def has_ip_in_dns(hostname):
-    for t in ("A", "AAAA"):     # IPv4 & IPv6
+    for t in ("A", "AAAA"):  # IPv4 & IPv6
         try:
             dns.resolver.resolve(hostname, t)
             return True
@@ -335,10 +329,8 @@ def get_default_vpnconf():
 def confirm_enable_vpn():
     print(EXPLAIN_VPN_ENABLING)
     return choose(
-        "Please confirm you want to enable the VPN:", {
-            "Yes (static WalT platform)": True,
-            "No (mobile WalT platform)": False
-        }
+        "Please confirm you want to enable the VPN:",
+        {"Yes (static WalT platform)": True, "No (mobile WalT platform)": False},
     )
 
 
@@ -353,12 +345,14 @@ def toggle_vpn(context, vpnconf):
         if check[0]:
             fqdn = socket.getfqdn()
             if confirm_enable_vpn():
-                vpnconf.update({
-                    "enabled": True,
-                    "ssh-entrypoint": fqdn,
-                    "http-entrypoint": fqdn,
-                    "boot-mode": "permissive",
-                })
+                vpnconf.update(
+                    {
+                        "enabled": True,
+                        "ssh-entrypoint": fqdn,
+                        "http-entrypoint": fqdn,
+                        "boot-mode": "permissive",
+                    }
+                )
         else:
             print(check[1])
             print(VPN_GENERIC_ISSUE_MESSAGE)
@@ -425,10 +419,11 @@ def setup_vpn():
         modified = True
     # create or update authorized_keys file
     ca_pub_key = VPN_CA_KEY_PUB.read_text().strip()
-    authorized_keys = (WALT_VPN_USER["authorized_keys_pattern"]
-                       % dict(ca_pub_key=ca_pub_key))
-    if not (home_dir / ".ssh" ).exists():
-        (home_dir / ".ssh" ).mkdir(mode=0o700)
+    authorized_keys = WALT_VPN_USER["authorized_keys_pattern"] % dict(
+        ca_pub_key=ca_pub_key
+    )
+    if not (home_dir / ".ssh").exists():
+        (home_dir / ".ssh").mkdir(mode=0o700)
         modified = True
     authorized_keys_path = home_dir / ".ssh" / "authorized_keys"
     cur_authorized_keys = ""

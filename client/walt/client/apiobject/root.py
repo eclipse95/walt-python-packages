@@ -4,10 +4,11 @@ from walt.client.apiobject.base import APIObjectBase
 class APIRoot:
     def __new__(cls):
         class APIRootImpl(APIObjectBase):
-            "WALT API root"
+            """WALT API root"""
 
             def _check_update(self):
                 from walt.client.apitools import silent_server_link
+
                 try:
                     with silent_server_link() as server:
                         pass
@@ -15,7 +16,7 @@ class APIRoot:
                     # module reloading breaks exception catching,
                     # so check the exception by name
                     if e.__class__.__name__ == "WalTUpdatedException":
-                        pass   # ok, code was just updated
+                        pass  # ok, code was just updated
                     else:
                         raise
 

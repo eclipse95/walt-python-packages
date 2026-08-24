@@ -142,40 +142,38 @@ Usage: %(prog)s [--attach-usb] [--managed] --mac <node_mac> --ip <node_ip>\
 def apply_disk_template(disk_path, disk_template):
     if disk_template == "none":
         return  # nothing to do
-    elif disk_template == "fat32":
-        part_type = "0c"    # "W95 FAT32 (LBA)"
+    init_content = None
+    if disk_template == "fat32":
+        part_type = "0c"  # "W95 FAT32 (LBA)"
         mkfs = "mkfs.vfat -S 512"
-        init_content = None
     elif disk_template == "ext4":
-        part_type = "83"    # "Linux"
+        part_type = "83"  # "Linux"
         mkfs = "mkfs.ext4"
-        init_content = None
     elif disk_template in ("hybrid-boot-v", "hybrid-boot-p"):
-        part_type = "83"    # "Linux"
+        part_type = "83"  # "Linux"
         init_content = tempfile.TemporaryDirectory()
         walt_hybrid_dir = Path(f"{init_content.name}/walt_hybrid")
         walt_hybrid_dir.mkdir()
         if disk_template == "hybrid-boot-p":
             (walt_hybrid_dir / ".persistent").touch()
         mkfs = f"mkfs.ext4 -d {init_content.name}"
+    else:
+        raise NotImplementedError(disk_template)
     # format the disk
     sfdisk_cmd = f"sfdisk --no-reread --no-tell-kernel {disk_path}"
-    subprocess.run(shlex.split(sfdisk_cmd),
-                   text=True,
-                   input=f" 1 : start=2048 type={part_type}")
+    subprocess.run(
+        shlex.split(sfdisk_cmd), text=True, input=f" 1 : start=2048 type={part_type}"
+    )
     # get a free loop device
-    loop_device = subprocess.run(shlex.split("losetup -f"),
-                                 capture_output=True,
-                                 text=True).stdout
+    loop_device = subprocess.run(
+        shlex.split("losetup -f"), capture_output=True, text=True
+    ).stdout
     # map the loop device on first partition
-    subprocess.run(shlex.split(
-        f"losetup -o {2048*512} {loop_device} {disk_path}"))
+    subprocess.run(shlex.split(f"losetup -o {2048*512} {loop_device} {disk_path}"))
     # format the partition
-    subprocess.run(shlex.split(
-        f"{mkfs} {loop_device}"))
+    subprocess.run(shlex.split(f"{mkfs} {loop_device}"))
     # release the loop device
-    subprocess.run(shlex.split(
-        f"losetup -d {loop_device}"))
+    subprocess.run(shlex.split(f"losetup -d {loop_device}"))
     # cleanup
     if init_content is not None:
         init_content.cleanup()
@@ -193,30 +191,30 @@ def get_qemu_disks_args(disks_path, disks_info):
         disk_params_file = Path(f"{disks_path}/disk_{disk_index}.info")
         if disk_params_file.exists():
             disk_params = json.loads(disk_params_file.read_text())
-            old_disk_template = disk_params['template']
-        else:   # backward compatibility
-            old_disk_template = 'none'
-        if disk_path.exists():
+            old_disk_template = disk_params["template"]
+        else:  # backward compatibility
+            old_disk_template = "none"
+        if disk_path.exists() and (disk_path.stat().st_size != disk_cap_bytes or old_disk_template != disk_template):
             # if not expected size or template, remove it
-            if disk_path.stat().st_size != disk_cap_bytes or \
-                    old_disk_template != disk_template:
-                disk_path.unlink()
-                if disk_params_file.exists():
-                    disk_params_file.unlink()
+            disk_path.unlink()
+            if disk_params_file.exists():
+                disk_params_file.unlink()
         if not disk_path.exists():
             disk_path.touch()
             truncate(str(disk_path), disk_cap_bytes)
             apply_disk_template(disk_path, disk_template)
             disk_params_file.write_text(json.dumps({"template": disk_template}))
         qemu_disk_opts += (
-            f" -drive file={disk_path},format=raw,id=disk{disk_index},if=none" +
-            " -device virtio-scsi-pci" +
-            f" -device scsi-hd,drive=disk{disk_index},product=QEMU-DISK")
+            f" -drive file={disk_path},format=raw,id=disk{disk_index},if=none"
+            " -device virtio-scsi-pci"
+            f" -device scsi-hd,drive=disk{disk_index},product=QEMU-DISK"
+        )
     return qemu_disk_opts
 
 
 def get_qemu_networks_args(hostmac, hostid, networks_path, networks_info):
     import walt.virtual.node
+
     this_dir = files(walt.virtual.node)
     Path(networks_path).mkdir(parents=True, exist_ok=True)
     qemu_networks_opts = ""
@@ -249,7 +247,7 @@ def get_qemu_networks_args(hostmac, hostid, networks_path, networks_info):
             mac = get_persistent_random_mac(mac_file)
         netdev_opts = (
             f"type=tap,id={network_name},vhost=on,"
-            + f"script={ifup_script},downscript={ifdown_script}"
+            f"script={ifup_script},downscript={ifdown_script}"
         )
         device_opts = f"{QEMU_NET_DRIVER},mac={mac},netdev={network_name}"
         qemu_networks_opts += f" -netdev {netdev_opts} -device {device_opts}"
@@ -265,7 +263,7 @@ class VMParameters:
     # invalid chars in the name are replaced by underscores.
 
     def _escape(self, attr):
-        return attr.replace('-', '_').replace(':', "__")
+        return attr.replace("-", "_").replace(":", "__")
 
     def __getitem__(self, attr):
         return getattr(self, self._escape(attr))
@@ -287,7 +285,7 @@ class VMParameters:
 
     @property
     def fs_path(self):
-        return VNODE_FS_PATH % dict(mac = self.mac)
+        return VNODE_FS_PATH % dict(mac=self.mac)
 
     @property
     def ram(self):
@@ -313,14 +311,13 @@ class VMParameters:
     def disks(self, disks_value):
         parsing = parse_vnode_disks_value(disks_value)
         if parsing[0] is False:
-            raise ValueError(f"Invalid value for disks: {parsing[1]}")
+            raise ValueError("Invalid value for disks: %s" % parsing[1])
         self._disks_info = parsing[1]
         self._disks = disks_value
 
     @property
     def qemu_disks_args(self):
-        return get_qemu_disks_args(
-            self.disks_path, self._disks_info)
+        return get_qemu_disks_args(self.disks_path, self._disks_info)
 
     @property
     def networks(self):
@@ -330,14 +327,15 @@ class VMParameters:
     def networks(self, networks_value):
         parsing = parse_vnode_networks_value(networks_value)
         if parsing[0] is False:
-            raise ValueError(f"Invalid value for networks: {parsing[1]}")
+            raise ValueError("Invalid value for networks: %s" % parsing[1])
         self._networks_info = parsing[1]
         self._networks = networks_value
 
     @property
     def qemu_networks_args(self):
         return get_qemu_networks_args(
-            self.mac, self.hostid, self.networks_path, self._networks_info)
+            self.mac, self.hostid, self.networks_path, self._networks_info
+        )
 
     @property
     def boot_delay(self):
@@ -350,10 +348,12 @@ class VMParameters:
                 delay_value = int(delay_value)
             except ValueError:
                 raise ValueError(
-                        'Invalid value for --boot-delay (use int value or "random")')
+                    'Invalid value for --boot-delay (use int value or "random")'
+                )
             if delay_value < 0:
                 raise ValueError(
-                        "Invalid value for --boot-delay (use a positive value)")
+                    "Invalid value for --boot-delay (use a positive value)"
+                )
         self._boot_delay = delay_value
 
 
@@ -405,8 +405,8 @@ def get_env_start(info):
     env.gateway = info._gateway
     if info._managed:
         env.waiter = select.poll()
-        env.waiter.register(0, select.POLLIN)   # listen on stdin
-        env.stdin_buffer = b''
+        env.waiter.register(0, select.POLLIN)  # listen on stdin
+        env.stdin_buffer = b""
     return env
 
 
@@ -420,14 +420,17 @@ def boot_kvm(env):
 def get_vm_args(env):
     """Managed mode: receive commands on stdin and control VM accordingly"""
     qemu_args = QEMU_ARGS
-    qemu_args += (f" -virtfs local,id=dev,path={env.fs_path},"
-                  "security_model=none,mount_tag=walt_image,readonly")
+    qemu_args += (
+        f" -virtfs local,id=dev,path={env.fs_path},"
+        "security_model=none,mount_tag=walt_image,readonly"
+    )
     if env.attach_usb:
         qemu_args += " " + get_qemu_usb_args()
     if "boot-initrd" in env:
         qemu_args += " -initrd %(boot-initrd)s"
     env.boot_kernel_cmdline = (
-            getattr(env, "boot_kernel_cmdline", "") + " " + QEMU_APPEND)
+        getattr(env, "boot_kernel_cmdline", "") + " " + QEMU_APPEND
+    )
     if len(env.boot_kernel_cmdline.strip()) > 0:
         qemu_args += " -append '%(boot_kernel_cmdline)s'"
     cmd = qemu_args % env
@@ -446,7 +449,7 @@ def boot_kvm_managed(env):
     if pid == 0:
         # child
         os.dup2(qemu_stdin_r, 0)  # set stdin
-        os.dup2(qemu_stdout_w, 1) # set stdout
+        os.dup2(qemu_stdout_w, 1)  # set stdout
         os.dup2(1, 2)  # duplicate stdout on stderr
         # cleanup file descriptors
         for fd in qemu_stdin_r, qemu_stdin_w, qemu_stdout_r, qemu_stdout_w:
@@ -493,12 +496,12 @@ def boot_kvm_managed(env):
                 STATE["QEMU_PID"] = None
                 if env.reboot_command is not None:
                     subprocess.call(env.reboot_command, shell=True)
-        while b'\n' in env.stdin_buffer:
-            line, env.stdin_buffer = env.stdin_buffer.split(b'\n', maxsplit=1)
+        while b"\n" in env.stdin_buffer:
+            line, env.stdin_buffer = env.stdin_buffer.split(b"\n", maxsplit=1)
             line = line.decode(sys.stdin.encoding)
             args = line.split(" ")
             if len(args) == 0:
-                continue    # empty line, ignore
+                continue  # empty line, ignore
             if args[0] == "CONF":
                 setattr(env, args[1], args[2])
             elif args[0] == "INPUT":
@@ -568,6 +571,7 @@ def add_network_info(env):
             env.netmask = info["netmask"]
         if env.gateway is None:
             env.gateway = info["gateway"]
+    return False
 
 
 def random_wait():
@@ -615,6 +619,7 @@ def node_loop(info):
         except Exception:
             print("Exception in node_loop()")
             import traceback
+
             traceback.print_exc()
             time.sleep(2)
 

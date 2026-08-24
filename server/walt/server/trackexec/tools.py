@@ -11,18 +11,17 @@ def _map_block_max_bytecode_size(stack_size):
 
 
 def map_block_dt(stack_size):
-    return np.dtype([('stack_size', np.uint16),
-                     ('stack', [
-                         ('file_id', np.uint16),
-                         ('lineno', np.uint16)
-                      ], (stack_size,)),
-                     ('bytecode', np.uint16, (
-                         _map_block_max_bytecode_size(stack_size),))])
+    return np.dtype(
+        [
+            ("stack_size", np.uint16),
+            ("stack", [("file_id", np.uint16), ("lineno", np.uint16)], (stack_size,)),
+            ("bytecode", np.uint16, (_map_block_max_bytecode_size(stack_size),)),
+        ]
+    )
 
 
 def index_block_dt():
-    return np.dtype([('timestamp', np.uint64),
-                     ('min_stack_size', np.uint16)])
+    return np.dtype([("timestamp", np.uint64), ("min_stack_size", np.uint16)])
 
 
 class Uint16Stack:
@@ -40,20 +39,21 @@ class Uint16Stack:
 
     def top(self):
         if self.level > 0:
-            return self.array[self.level-1]
+            return self.array[self.level - 1]
+        return None
 
     def view(self):
-        return self.array[:self.level]
+        return self.array[: self.level]
 
     def __getitem__(self, idx):
-        return self.array[:self.level][idx]
+        return self.array[: self.level][idx]
 
     def copy_from(self, a):
         self.level = len(a)
-        self.array[:self.level] = a
+        self.array[: self.level] = a
 
     def pad(self, v, size):
-        self.array[self.level:size] = v
+        self.array[self.level : size] = v
         self.level = size
 
     def reset(self):
@@ -64,7 +64,7 @@ class Uint16Stack:
 
     def copy(self):
         other = Uint16Stack()
-        other.copy_from(self.array[:self.level])
+        other.copy_from(self.array[: self.level])
         return other
 
 

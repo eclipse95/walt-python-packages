@@ -17,8 +17,7 @@ class NodeExposeFeedbackListener:
             # the node wrote something on the socket
             # we just have to copy this to the user socket
             return read_and_copy(self.env.node_sock_file, self.env.client_sock_file)
-        else:
-            return False
+        return False
 
     def close(self):
         self.env.close()
@@ -39,8 +38,7 @@ class NodeExposeSocketListener:
 
     @property
     def ready(self):
-        return (self.node_sock_file is not None and
-                self.client_sock_file is not None)
+        return self.node_sock_file is not None and self.client_sock_file is not None
 
     def start(self):
         try:
@@ -74,12 +72,11 @@ class NodeExposeSocketListener:
             self.node_ip_and_port = (params["node_ip"], params["node_port"])
             # we now have all info to connect to the node
             return self.start()
-        elif not self.ready:
-            return False    # we should not get events!
-        else:
-            # otherwise we are all set. Thus, getting input data means
-            # data was sent on the other end.
-            return read_and_copy(self.client_sock_file, self.node_sock_file)
+        if not self.ready:
+            return False  # we should not get events!
+        # otherwise we are all set. Thus, getting input data means
+        # data was sent on the other end.
+        return read_and_copy(self.client_sock_file, self.node_sock_file)
 
     def close(self):
         if self.client_sock_file:
@@ -90,7 +87,7 @@ class NodeExposeSocketListener:
             self.node_sock_file = None
 
 
-class ExposeManager(object):
+class ExposeManager:
     def __init__(self, tcp_server, ev_loop):
         for cls in [NodeExposeSocketListener]:
             tcp_server.register_listener_class(

@@ -9,7 +9,7 @@ from walt.common.formatting import format_sentence_about_nodes
 # carefully written regarding these remote procedure calls.
 
 
-class WaitInfo(object):
+class WaitInfo:
     def __init__(self):
         self.tid_to_macs = defaultdict(set)
         self.mac_to_tids = defaultdict(set)
@@ -25,7 +25,7 @@ class WaitInfo(object):
 
     def flush(self):
         tid_to_message = self.tid_to_message.copy()
-        self.tid_to_message = {}    # reset
+        self.tid_to_message = {}  # reset
         # unblock clients
         while len(self.completed_tasks) > 0:
             task = self.completed_tasks[0]
@@ -43,9 +43,11 @@ class WaitInfo(object):
 
     def wf_wait(self, wf, requester, task, nodes, **env):
         not_booted = [node for node in nodes if not node.booted]
+
         def end(res):
             task.return_result(res)  # unblock the client
-            wf.next()                # continue (probably end) the workflow
+            wf.next()  # continue (probably end) the workflow
+
         if len(not_booted) == 0:
             end(0)
             return

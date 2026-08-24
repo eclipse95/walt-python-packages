@@ -82,4 +82,3 @@ def serialized(lock_path):
 def serialized_mounts():
     with serialized(SERIALIZED_MOUNTS_LOCK):
         yield
-

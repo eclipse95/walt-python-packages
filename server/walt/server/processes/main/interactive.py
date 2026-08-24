@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from walt.common.tcp import Requests
-from walt.server.const import SSH_NODE_COMMAND, SSH_DEVICE_COMMAND
+from walt.server.const import SSH_DEVICE_COMMAND, SSH_NODE_COMMAND
 from walt.server.processes.main.parallel import ParallelProcessSocketListener
 
 # when running walt image shell, run bash if available, sh otherwise.
@@ -74,7 +74,7 @@ class DeviceShellSocketListener(PromptSocketListener):
         return f"{SSH_DEVICE_COMMAND} {host}"
 
 
-class InteractionManager(object):
+class InteractionManager:
     def __init__(self, tcp_server, ev_loop):
         for cls in [
             SQLPromptSocketListener,

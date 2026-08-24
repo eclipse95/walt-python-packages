@@ -1,14 +1,22 @@
 import os
 from ipaddress import ip_address
-import numpy as np
 from pathlib import Path
 
+import numpy as np
+
 from walt.common.netsetup import NetSetup
-from walt.server.processes.main.network.service import ServiceRestarter
-from walt.server.processes.main.network.service import async_systemd_service_restart_cmd
-from walt.server.tools import get_server_ip, get_walt_subnet, ip
-from walt.server.tools import np_str_pattern, np_apply_str_pattern
-from walt.server.tools import get_rpi_foundation_mac_vendor_ids
+from walt.server.processes.main.network.service import (
+    ServiceRestarter,
+    async_systemd_service_restart_cmd,
+)
+from walt.server.tools import (
+    get_rpi_foundation_mac_vendor_ids,
+    get_server_ip,
+    get_walt_subnet,
+    ip,
+    np_apply_str_pattern,
+    np_str_pattern,
+)
 
 # STATE_DIRECTORY is set by systemd to the daemon's state directory.  By
 # default, it is /var/lib/walt
@@ -21,8 +29,9 @@ DHCPD_CONF_FILE = (
 
 
 RPI_MAC_FILTER = " or\n".join(
-    f"""(b2a(16,8,":",substring(hardware, 1, 3)) = "{vendor_id}")""" \
-    for vendor_id in get_rpi_foundation_mac_vendor_ids(zero_padded=False))
+    f"""(b2a(16,8,":",substring(hardware, 1, 3)) = "{vendor_id}")"""
+    for vendor_id in get_rpi_foundation_mac_vendor_ids(zero_padded=False)
+)
 
 
 CONF_PATTERN = """
@@ -184,10 +193,7 @@ group {
 
 %(walt_registered_lan_unknown_conf)s
 }
-""".replace(
-        "rpi-mac-filter", RPI_MAC_FILTER
-  ).replace(
-        "b2a", "binary-to-ascii")
+""".replace("rpi-mac-filter", RPI_MAC_FILTER).replace("b2a", "binary-to-ascii")
 
 
 RANGE_CONF_PATTERN = "    range %(first)s %(last)s;"
@@ -207,9 +213,9 @@ def get_contiguous_ranges(ips):
     arr = np.array(sorted(ips), dtype=int)
     breaks = (arr[1:] - arr[:-1] - 1).nonzero()[0]
     ranges, start_intvl = [], 0
-    for br in list(breaks) + [len(arr) -1]:
+    for br in list(breaks) + [len(arr) - 1]:
         ranges.append((int(arr[start_intvl]), int(arr[br])))
-        start_intvl = br+1
+        start_intvl = br + 1
     return ranges
 
 
@@ -234,13 +240,14 @@ def generate_dhcpd_conf(subnet, devices):
     )
     for netsetup, netsetup_label in ((NetSetup.LAN, "lan"), (NetSetup.NAT, "nat")):
         for dev_type in ("node", "switch", "unknown"):
-            dev_mask = (devices.netsetup == netsetup)
-            dev_mask &= (devices.type == dev_type)
+            dev_mask = devices.netsetup == netsetup
+            dev_mask &= devices.type == dev_type
             confs = devices.formatted_conf[dev_mask]
             infos.update(
                 {f"walt_registered_{netsetup_label}_{dev_type}_conf": "\n".join(confs)}
             )
     return CONF_PATTERN % infos
+
 
 # We handle VPN nodes differently:
 # - they are referenced twice, once with the regular mac and once
@@ -291,7 +298,7 @@ def format_conf(devices, mask, pattern):
     devices.formatted_conf[mask] = np_apply_str_pattern(pattern, devices[mask])
 
 
-class DHCPServer(object):
+class DHCPServer:
     def __init__(self, db, ev_loop):
         self.db = db
         restart_cmd = async_systemd_service_restart_cmd("walt-server-dhcpd.service")
@@ -311,9 +318,8 @@ class DHCPServer(object):
             self.restarter.inc_config_version()
         if (not self.restarter.uptodate()) or force:
             self.restarter.restart(cb=cb)
-        else:
-            if cb is not None:
-                cb()
+        elif cb is not None:
+            cb()
 
     def wf_update(self, wf, force=False, **env):
         self.update(force=force, cb=wf.next)

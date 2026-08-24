@@ -5,7 +5,7 @@ import sys
 # and that must be performed by the main process.
 
 
-class APISessionTask(object):
+class APISessionTask:
     def __init__(self, rpc_context, api_session, attr, args, kwargs):
         self.api_session = api_session
         self.attr = attr
@@ -18,7 +18,8 @@ class APISessionTask(object):
         # use the get_username() function of the session object
         # which will cache it to avoid multiple remote calls
         self.context.requester.get_username = functools.partial(
-                api_session.get_username, rpc_context)
+            api_session.get_username, rpc_context
+        )
 
     def set_async(self):
         self.rpc_context.task.set_async()

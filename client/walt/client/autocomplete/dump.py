@@ -1,8 +1,8 @@
 from inspect import getfullargspec
 
 from plumbum.lib import getdoc
-from walt.doc.md import get_described_topics, get_topics
 
+from walt.doc.md import get_described_topics, get_topics
 
 # Notes:
 # * The code was designed for bash at first. In zsh, we finally used
@@ -15,7 +15,7 @@ from walt.doc.md import get_described_topics, get_topics
 
 
 HEADER = {
-"bash": """\
+    "bash": """\
 _WALT_COMP_CACHE_VALIDITY_SECS=3
 _walt_comp_debug=0
 
@@ -109,8 +109,7 @@ _walt_complete()
     local validated="${words[*]:0:$COMP_CWORD}"
     case "${validated}" in
 """,
-
-"zsh": """\
+    "zsh": """\
 #compdef _walt walt
 
 _walt_comp_debug=0
@@ -162,7 +161,7 @@ function _walt
     declare -A valued_option_types=() positional_arg_types=()
     local validated="${words[*]}"
     case "${validated}" in
-"""
+""",
 }
 
 APP_SECTION = """\
@@ -285,7 +284,7 @@ __described_help_topics__"
 """
 
 FOOTER = {
-"bash": """\
+    "bash": """\
     esac
     local possible=""
     local possible_described=""
@@ -321,8 +320,7 @@ FOOTER = {
 } &&
 complete -F _walt_complete walt
 """,
-
-"zsh": """\
+    "zsh": """\
     esac
     local possible=""
     local -a possible_described=()
@@ -330,8 +328,9 @@ complete -F _walt_complete walt
     possible=($(echo $possible))
     _walt_comp_reply
 }
-"""
+""",
 }
+
 
 # when the command has variable arguments
 # (e.g. walt node config <node_set> <config_item>...)
@@ -363,7 +362,7 @@ def dump_as_array(d):
 
 
 def get_app_info(app):
-    doc = app.DESCRIPTION if app.DESCRIPTION else getdoc(app)
+    doc = app.DESCRIPTION or getdoc(app)
     app_info = {"description": doc, "children": {}, "options": {}}
     for name, child in app._subcommands.items():
         subapp = child.subapplication("walt")
@@ -391,9 +390,8 @@ def get_described_items(items, get_item_fullname):
     )
     name_max = max(len(fullname) for fullname, desc in fullname_and_desc)
     return "\n".join(
-        f"""{fullname:<{name_max}} -- {desc}""" \
-                for fullname, desc in fullname_and_desc
-        )
+        f"""{fullname:<{name_max}} -- {desc}""" for fullname, desc in fullname_and_desc
+    )
 
 
 def dump_assign_vars(assign_vars):
@@ -406,8 +404,7 @@ def dump_assign_vars(assign_vars):
 def get_option_fullname(optname, optinfo):
     if optinfo["opttype"] == "standalone":
         return optname
-    else:
-        return optname + " " + optinfo["argname"]
+    return optname + " " + optinfo["argname"]
 
 
 def quoted(name):
@@ -421,8 +418,7 @@ def dump_app_section(path, app_tree):
     args = app_tree["args"]
     num_args = app_tree["num_args"]
     if len(subapps) > 0:
-        described_subapps = get_described_items(subapps,
-                                                (lambda name, app_info: name))
+        described_subapps = get_described_items(subapps, (lambda name, app_info: name))
         assign_vars += [
             ("subapps", quoted(" ".join(subapps))),
             ("described_subapps", '"\\\n' + described_subapps + '"'),

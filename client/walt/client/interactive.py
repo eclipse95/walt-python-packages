@@ -2,7 +2,6 @@
 import io
 import os
 import signal
-import socket
 import sys
 from select import select
 from socket import SHUT_WR
@@ -10,7 +9,8 @@ from sys import stdin, stdout
 
 from walt.client.link import connect_to_tcp_server
 from walt.common.io import read_and_copy, unbuffered
-from walt.common.tcp import Requests, write_pickle, MyPickle as pickle
+from walt.common.tcp import MyPickle as pickle
+from walt.common.tcp import Requests, write_pickle
 
 SQL_SHELL_MESSAGE = """\
 Type \\dt for a list of tables.
@@ -21,7 +21,7 @@ Run 'walt help show shells' for more info.
 """
 
 
-class PromptClient(object):
+class PromptClient:
     def __init__(self, req_id, capture_output=False, **params):
         self.capture_output = capture_output
         self.resize_handler_called = False
@@ -32,6 +32,7 @@ class PromptClient(object):
             # and the import of the first call could be interrupted.
             # so let's do it now.
             from walt.common.term import TTYSettings
+
             self.tty_settings = TTYSettings()
             # send terminal width and provided parameters
             params.update(win_size=self.tty_settings.win_size)
@@ -65,6 +66,7 @@ class PromptClient(object):
                 termsize = os.get_terminal_size()
             except OSError:
                 import shutil
+
                 termsize = shutil.get_terminal_size()
             buf = pickle.dumps(
                 {
@@ -132,12 +134,10 @@ class PromptClient(object):
                             fds = [self.sock_file]
                             continue
                         if self.tty_mode:
-                            buf = pickle.dumps(
-                                {"evt": "input_data", "data": buf}
-                            )
+                            buf = pickle.dumps({"evt": "input_data", "data": buf})
                         self.sock_file.write(buf)
                         self.sock_file.flush()
-                    except socket.error:
+                    except OSError:
                         break
         finally:
             if self.tty_mode:

@@ -1,7 +1,8 @@
 import functools
+
 from walt.common.tools import parse_image_fullname
-from walt.server.processes.main.images.tools import handle_missing_credentials
 from walt.server.processes.main.images.image import validate_image_name
+from walt.server.processes.main.images.tools import handle_missing_credentials
 
 
 def clone(blocking, server, requester, task, image_name, **kwargs):
@@ -36,6 +37,6 @@ def clone(blocking, server, requester, task, image_name, **kwargs):
             )
 
     blocking_func = functools.partial(
-            blocking.clone_image,
-            requester, image_name=image_name, **kwargs)
+        blocking.clone_image, requester, image_name=image_name, **kwargs
+    )
     handle_missing_credentials(requester, blocking_func, callback)

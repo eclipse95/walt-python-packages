@@ -3,6 +3,7 @@ import re
 import sys
 
 from plumbum import cli
+
 from walt.client.application import WalTApplication, WalTCategoryApplication
 from walt.client.link import ClientToServerLink, connect_to_tcp_server
 from walt.client.timeout import (
@@ -51,7 +52,7 @@ def compute_relative_date(server_time, rel_date):
     return server_time - delay
 
 
-class LogsFlowFromServer(object):
+class LogsFlowFromServer:
     def __init__(self):
         self.f = connect_to_tcp_server()
 
@@ -135,7 +136,7 @@ class WalTLogShowOrWait(WalTApplication):
         try:
             if history_range.lower() == "none":
                 return True, None
-            elif history_range.lower() == "full":
+            if history_range.lower() == "full":
                 return True, (None, None)
             parts = history_range.split(":")
             if len(parts) != 2:
@@ -158,7 +159,7 @@ class WalTLogShowOrWait(WalTApplication):
                 if history[0] > history[1]:
                     print(
                         "Issue with the HISTORY_RANGE specified: "
-                        + "the starting point is newer than the ending point."
+                        "the starting point is newer than the ending point."
                     )
                     return MALFORMED
             return True, tuple(history)
@@ -265,14 +266,14 @@ class WalTLogShow(WalTLogShowOrWait):
                 "See 'walt help show log-realtime' and 'walt help show log-history'"
                 " for more info."
             )
-            return
+            return None
         self.handle_shortcut_options()
         if not WalTLogShowOrWait.verify_regexps(self.streams, logline_regexp):
-            return
+            return None
         with ClientToServerLink() as server:
             issuers = self.get_issuers(server)
             if issuers is None:
-                return
+                return None
             range_analysis = WalTLogShowOrWait.analyse_history_range(
                 server, self.history_range
             )
@@ -281,7 +282,7 @@ class WalTLogShow(WalTLogShowOrWait):
                     "Invalid HISTORY_RANGE."
                     " See 'walt help show log-history' for more info."
                 )
-                return
+                return None
             history_range = range_analysis[1]
             # Note : if a regular expression is specified, we do not bother computing
             # the number of log records, because this computation may be quite expensive
@@ -296,7 +297,7 @@ class WalTLogShow(WalTLogShowOrWait):
                         % num_logs
                     )
                     if not confirm():
-                        return
+                        return None
         return WalTLogShowOrWait.start_display(
             self.format_string,
             history_range,
@@ -330,7 +331,8 @@ class WalTLogAddCheckpoint(WalTApplication):
                 else:
                     try:
                         self.date = datetime.datetime.strptime(
-                                        self.date, DATE_FORMAT_STRING).timestamp()
+                            self.date, DATE_FORMAT_STRING
+                        ).timestamp()
                     except Exception:
                         print("Could not parse the date specified.")
                         print("Expected format is: %s" % DATE_FORMAT_STRING_HUMAN)
@@ -388,11 +390,11 @@ class WalTLogWait(WalTLogShowOrWait):
     def main(self, logline_regexp):
         self.handle_shortcut_options()
         if not WalTLogShowOrWait.verify_regexps(self.streams, logline_regexp):
-            return
+            return None
         with ClientToServerLink() as server:
             issuers = self.get_issuers(server)
             if issuers is None:
-                return
+                return None
             if self.time_margin != 0:
                 history_range = "-%ds:" % self.time_margin
                 range_analysis = WalTLogShowOrWait.analyse_history_range(
@@ -414,8 +416,7 @@ class WalTLogWait(WalTLogShowOrWait):
                 missing_issuers.discard(record["issuer"])
                 if len(missing_issuers) == 0:
                     return True  # yes, we should stop
-                else:
-                    return False  # no, we are not done yet
+                return False  # no, we are not done yet
 
         return WalTLogShowOrWait.start_display(
             self.format_string,

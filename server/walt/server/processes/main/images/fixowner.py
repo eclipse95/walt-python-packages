@@ -33,7 +33,7 @@ Image %s now belongs to you.
 def fix_owner(images, registry: WalTLocalRegistry, requester, other_user):
     username = requester.get_username()
     if not username:
-        return None  # client already disconnected, give up
+        return  # client already disconnected, give up
     if username == other_user:
         requester.stderr.write(MSG_SAME_USER % other_user)
         return

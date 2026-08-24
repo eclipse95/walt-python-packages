@@ -9,10 +9,10 @@ WALT_DBNAME = "walt"
 WALT_DBUSER = "root"
 SSH_NODE_COMMAND = (
     "ssh -o PreferredAuthentications=publickey "
-        "-o UserKnownHostsFile=/var/lib/walt/ssh/known_hosts.nodes "
-        "-o HostKeyAlias=walt.node "
-        "-o ConnectTimeout=10 "
-        "-o ServerAliveInterval=5 "
+    "-o UserKnownHostsFile=/var/lib/walt/ssh/known_hosts.nodes "
+    "-o HostKeyAlias=walt.node "
+    "-o ConnectTimeout=10 "
+    "-o ServerAliveInterval=5 "
 )
 SSH_DEVICE_COMMAND = "walt-device-ssh"
 WALT_NODE_NET_SERVICE_PORT = 12346

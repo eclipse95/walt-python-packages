@@ -16,8 +16,7 @@ ffibuilder.cdef(PROTOTYPES)
 ffibuilder.set_source(
     "walt.server.ext._c_ext",  # name of the output C extension
     PROTOTYPES,
-    sources=["walt/server/ext/posix_regex.c",
-             "walt/server/ext/vpn.c"],
+    sources=["walt/server/ext/posix_regex.c", "walt/server/ext/vpn.c"],
 )
 
 if __name__ == "__main__":

@@ -8,7 +8,8 @@ def oar_datetime_to_unixts(dt):
     """Convert a naive g5k datetime to a unix timestamp.
 
     Input datetime is expected to be naive (no tz attached) and
-    to reflect the time  in the g5k oar/oargrid timezone Europe/Paris."""
+    to reflect the time  in the g5k oar/oargrid timezone Europe/Paris.
+    """
     from execo.time_utils import datetime_to_unixts
 
     # forking code because modifying os.environ["TZ"] and calling
@@ -48,19 +49,19 @@ def _get_vlans_API(site):
 
 def load_execo_g5k():
     import logging
+
     # execo has two methods for loading the planning: API or OAR database.
     # it uses the OAR database if it is able to import the module psycopg2,
     # and the API otherwise. The above trick to allow local vlans only
     # applies to the API access, and hacking the database access would require
     # more code, so we prevent the loading of psycopg2 to force the API method.
     import sys
-    sys.modules['psycopg2'] = None
+
+    sys.modules["psycopg2"] = None
 
     from execo.log import logger
 
     logger.setLevel(logging.WARNING)
-    import execo_g5k.api_utils
-    import execo_g5k.charter
     import execo_g5k.planning
 
     # redirect to our fixed function(s)

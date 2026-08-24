@@ -19,4 +19,3 @@ def failing_server_socket_hook():
     if info["status"] != "ready":
         print("Deployment of WalT platform is not complete yet. Use 'walt g5k wait'.")
         sys.exit(1)
-    return  # if we are here, this is a real issue, let the caller handle it

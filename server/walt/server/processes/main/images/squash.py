@@ -3,17 +3,17 @@ def squash(store, blocking, requester, task_callback, image_name, confirmed):
     if image is None:
         # issue already reported, return to unblock the client
         task_callback("FAILED")
-        return
+        return None
     if image.task_label:
         requester.stderr.write(
             "Cannot open image %s because a %s is already running.\n"
             % (image_name, image.task_label)
         )
         task_callback("FAILED")
-        return
+        return None
     if not confirmed and store.warn_if_would_reboot_nodes(requester, image_name):
         task_callback("NEEDS_CONFIRM")
-        return
+        return None
     image.task_label = "squash process"
 
     def task_callback_2(res):

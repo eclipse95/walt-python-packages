@@ -60,8 +60,19 @@ def get_random_suffix():
     return "".join(random.choice("0123456789ABCDEF") for i in range(8))
 
 
-def _wf_analyse_file_types(wf, task, requester, operand_types, info,
-        src_path, src_type, dst_path, dst_type, dst_parent_type=None, **kwargs):
+def _wf_analyse_file_types(
+    wf,
+    task,
+    requester,
+    operand_types,
+    info,
+    src_path,
+    src_type,
+    dst_path,
+    dst_type,
+    dst_parent_type=None,
+    **kwargs,
+):
     dst_dir = None
     if dst_type is None:
         # we might be in this case:
@@ -108,12 +119,7 @@ def _wf_analyse_file_types(wf, task, requester, operand_types, info,
             dst_name = os.path.basename(src_path)
             dst_dir = dst_path
     # all seems fine
-    info.update(
-        valid=True,
-        dst_dir=dst_dir,
-        dst_name=dst_name,
-        src_path=src_path
-    )
+    info.update(valid=True, dst_dir=dst_dir, dst_name=dst_name, src_path=src_path)
     task.return_result(info)
     wf.next()
 
@@ -121,8 +127,7 @@ def _wf_analyse_file_types(wf, task, requester, operand_types, info,
 def get_manager(server, image_or_node_label):
     if image_or_node_label == "node":
         return server.nodes
-    else:
-        return server.images
+    return server.images
 
 
 def validate_cp(task, image_or_node_label, server, requester, src, dst):
@@ -144,13 +149,13 @@ def validate_cp(task, image_or_node_label, server, requester, src, dst):
                         " 'walt node cp'.\n"
                     )
                     return RESPONSE_BAD
-                elif index == 0:
+                if index == 0:
                     requester.stderr.write(
                         "Keyword 'booted-image' can only be used as destination,"
                         " not source.\n"
                     )
                     return RESPONSE_BAD
-                elif operand_types[0] != TYPE_IMAGE_OR_NODE:
+                if operand_types[0] != TYPE_IMAGE_OR_NODE:
                     invalid = True
                     break
                 image_tag_or_node, path = "booted-image", paths[0]
@@ -164,7 +169,7 @@ def validate_cp(task, image_or_node_label, server, requester, src, dst):
             )
             if status == "FAILED":
                 return RESPONSE_BAD
-            elif status == "NEEDS_CONFIRM":
+            if status == "NEEDS_CONFIRM":
                 needs_confirm = True
             filesystem = manager.get_cp_entity_filesystem(
                 requester, image_tag_or_node, **info
@@ -201,20 +206,18 @@ def validate_cp(task, image_or_node_label, server, requester, src, dst):
     steps = []
     if node_fs is not None:
         steps += [node_fs.wf_ping, _wf_after_fs_ping]
-    steps += [
-       _wf_get_src_type,
-       _wf_get_dst_type,
-       _wf_analyse_file_types
-    ]
-    wf = Workflow(steps,
-                  operand_types=operand_types,
-                  src_fs=src_fs,
-                  dst_fs=dst_fs,
-                  src_path=src_path,
-                  dst_path=dst_path,
-                  task=task,
-                  requester=requester,
-                  info=info)
+    steps += [_wf_get_src_type, _wf_get_dst_type, _wf_analyse_file_types]
+    wf = Workflow(
+        steps,
+        operand_types=operand_types,
+        src_fs=src_fs,
+        dst_fs=dst_fs,
+        src_path=src_path,
+        dst_path=dst_path,
+        task=task,
+        requester=requester,
+        info=info,
+    )
     wf.run()
 
 
@@ -363,9 +366,8 @@ class NodeFakeTFTPGet(ParallelProcessSocketListener):
             # save full_path for get_command() below
             self.params["full_path"] = full_path
             return True
-        else:
-            self.send_client("NO SUCH FILE\n")
-            return False
+        self.send_client("NO SUCH FILE\n")
+        return False
 
     def get_command(self, **params):
         return 'cat "%(full_path)s"' % params
@@ -395,7 +397,7 @@ class VPNNodeImageDump(ParallelProcessSocketListener):
         )
 
 
-class TransferManager(object):
+class TransferManager:
     def __init__(self, tcp_server, ev_loop):
         for cls in [
             ImageTarSender,
@@ -422,4 +424,5 @@ def format_node_to_booted_image_transfer_cmd(src_path, **params):
 
 def format_node_diff_dump_command(node_ip):
     return ssh_wrap_cmd("""/bin/_walt_internal_/walt-dump-diff-tar""") % dict(
-            node_ip=node_ip)
+        node_ip=node_ip
+    )

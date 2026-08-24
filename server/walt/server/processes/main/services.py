@@ -5,7 +5,7 @@ from walt.server.processes.main.api.vs import VSAPI
 from walt.server.processes.main.apisession import APISession
 
 
-class ServiceToHubProcess(object):
+class ServiceToHubProcess:
     def __init__(self, hub_rpc, server):
         self.hub_rpc = hub_rpc
         self.server = server

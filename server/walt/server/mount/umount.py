@@ -3,10 +3,16 @@ import os
 import sys
 import time
 
-from walt.server.exttools import umount, buildah, podman, lsof
-from walt.server.mount.tools import get_mount_path, mount_exists, serialized_mounts
-from walt.server.mount.tools import img_print as img_print_generic, long_image_id
-from walt.server.mount.tools import get_mount_container_name, get_mount_image_name
+from walt.server.exttools import buildah, lsof, podman, umount
+from walt.server.mount.tools import (
+    get_mount_container_name,
+    get_mount_image_name,
+    get_mount_path,
+    long_image_id,
+    mount_exists,
+    serialized_mounts,
+)
+from walt.server.mount.tools import img_print as img_print_generic
 
 
 def image_umount(image_id, mount_path):
@@ -16,7 +22,7 @@ def image_umount(image_id, mount_path):
         while True:
             try:
                 umount(mount_path, hide_stderr=True)
-                break   # ok, succeeded
+                break  # ok, succeeded
             except Exception:
                 new_lsof = lsof("-Q", "-Fp", mount_path)
                 if new_lsof != old_lsof and new_lsof != "":

@@ -3,18 +3,19 @@ import time
 from collections import defaultdict
 
 from snimpy.snmp import SNMPException
+
 from walt.common.formatting import format_sentence, human_readable_delay
 from walt.server import const, snmp
 from walt.server.processes.blocking.devices.grouper import (
-        Grouper,
-        AlreadyGroupedException,
+    AlreadyGroupedException,
+    Grouper,
 )
 from walt.server.processes.blocking.devices.loops import LoopsSolver
 from walt.server.processes.blocking.devices.tree import Tree
 from walt.server.snmp import NoSNMPVariantFound
 from walt.server.snmp.lldp import (
-        get_port_number_from_lldp_label,
-        save_lldp_label_for_port_number,
+    get_port_number_from_lldp_label,
+    save_lldp_label_for_port_number,
 )
 from walt.server.tools import get_server_ip, ip_in_walt_adm_network, ip_in_walt_network
 
@@ -84,7 +85,7 @@ class BridgeTopology:
     def register_secondary_macs(self, sw_mac, secondary_macs):
         """Register secondary mac addresses of a switch"""
         secondary_macs -= set((sw_mac,))
-        self.secondary_to_main_mac.update({mac: sw_mac for mac in secondary_macs})
+        self.secondary_to_main_mac.update(dict.fromkeys(secondary_macs, sw_mac))
 
     def register_neighbor(self, local_mac, local_port, neighbor_mac):
         """Register a neighbor of the forwarding table"""
@@ -214,7 +215,7 @@ class BridgeTopology:
         return ll_topology
 
 
-class LinkLayerTopology(object):
+class LinkLayerTopology:
     def __init__(self, vpnmac_to_mac):
         # links as a dict (mac1, mac2) -> (port1, port2, confirmed, last_seen)
         self.links = {}
@@ -248,18 +249,19 @@ class LinkLayerTopology(object):
             else:
                 port1, port2 = None, local_port
             self.links[(mac1, mac2)] = port1, port2, True, now
+        # update port on existing link
+        elif local_mac < neighbor_mac:
+            self.links[(mac1, mac2)] = local_port, link[1], True, now
         else:
-            # update port on existing link
-            if local_mac < neighbor_mac:
-                self.links[(mac1, mac2)] = local_port, link[1], True, now
-            else:
-                self.links[(mac1, mac2)] = link[0], local_port, True, now
+            self.links[(mac1, mac2)] = link[0], local_port, True, now
 
     def load_from_db(self, db):
-        sql = ( "SELECT "
-                    "mac1, mac2, port1, port2, confirmed, "
-                    "EXTRACT(EPOCH FROM last_seen)::float8 as last_seen "
-                "FROM topology;")
+        sql = (
+            "SELECT "
+            "mac1, mac2, port1, port2, confirmed, "
+            "EXTRACT(EPOCH FROM last_seen)::float8 as last_seen "
+            "FROM topology;"
+        )
         for db_link in db.execute(sql):
             self.links[(db_link.mac1, db_link.mac2)] = (
                 db_link.port1,
@@ -271,11 +273,15 @@ class LinkLayerTopology(object):
     def save_to_db(self, db):
         db.delete("topology")
         for link_macs, link_info in self.links.items():
-            db.execute(("INSERT INTO topology("
-                            "mac1, mac2, port1, "
-                            "port2, confirmed, last_seen) "
-                        "VALUES (%s, %s, %s, %s, %s, TO_TIMESTAMP(%s));"),
-                       link_macs + link_info)
+            db.execute(
+                (
+                    "INSERT INTO topology("
+                    "mac1, mac2, port1, "
+                    "port2, confirmed, last_seen) "
+                    "VALUES (%s, %s, %s, %s, %s, TO_TIMESTAMP(%s));"
+                ),
+                link_macs + link_info,
+            )
         db.commit()
 
     def set_confirm_all(self, value):
@@ -534,7 +540,8 @@ class LinkLayerTopology(object):
                 if device_types[parent_mac] == "switch":
                     if show_all or device_types[node_mac] != "unknown":
                         parent_port = port_names.get(
-                                (parent_mac, parent_port), parent_port)
+                            (parent_mac, parent_port), parent_port
+                        )
                         t.add_child(parent_mac, parent_port, node_mac)
         # prune parts of the tree
         self.prune(t, root_mac, device_types, lldp_forbidden, show_all)
@@ -591,7 +598,7 @@ class LinkLayerTopology(object):
             node_count_prune(root_mac)
 
 
-class TopologyManager(object):
+class TopologyManager:
     def __init__(self):
         self.last_scan = None
 
@@ -761,9 +768,7 @@ class TopologyManager(object):
                 server.add_or_update_device(**info)
             elif ip != db_info.ip:
                 # call add_or_update_device to update ip
-                info.update(mac=db_info.mac,
-                            type=db_info.type,
-                            name=db_info.name)
+                info.update(mac=db_info.mac, type=db_info.type, name=db_info.name)
                 server.add_or_update_device(**info)
         return None  # no error
 
@@ -852,9 +857,17 @@ class TopologyManager(object):
             return f"{sw_port}"
         return port_info.name
 
-    def report_lldp_neighbor(self, server, db,
-             sw_mac, sw_name, sw_ip,
-             sw_port_lldp_label, node_mac, node_name):
+    def report_lldp_neighbor(
+        self,
+        server,
+        db,
+        sw_mac,
+        sw_name,
+        sw_ip,
+        sw_port_lldp_label,
+        node_mac,
+        node_name,
+    ):
         # check if we know which port number corresponds to the label
         sw_port = get_port_number_from_lldp_label(sw_ip, sw_port_lldp_label)
         if sw_port is None:
@@ -865,9 +878,11 @@ class TopologyManager(object):
             sw_info = db.select_unique("devices", mac=sw_mac)
             topology = self.rescan(None, server, db, (sw_info,))
             sw_mac_again, sw_port, confirmed = topology.locate_mac(node_mac)
-            if (None in (sw_mac_again, sw_port, confirmed) or
-                confirmed is False or
-                sw_mac != sw_mac_again):
+            if (
+                None in (sw_mac_again, sw_port, confirmed)
+                or confirmed is False
+                or sw_mac != sw_mac_again
+            ):
                 # for some reason (communication failure?) node_mac was
                 # not detected by the scan, we cannot continue
                 return
@@ -878,8 +893,10 @@ class TopologyManager(object):
             updated = db.update_node_location(node_mac, sw_mac, sw_port)
         if updated:
             sw_port_name = self.get_sw_port_name(db, sw_mac, sw_port)
-            logline = (f"Node {node_name} is now connected "
-                       f"on {sw_name} port {sw_port_name}")
+            logline = (
+                f"Node {node_name} is now connected "
+                f"on {sw_name} port {sw_port_name}"
+            )
             server.logs.platform_log("devices", line=logline)
 
     def get_tree_root_mac(self, server, db_topology):
@@ -908,8 +925,8 @@ class TopologyManager(object):
         if len(unknown_neighbors) > 0:
             out += format_sentence(
                 "Note: %s was(were) detected, but its(their) type is unknown.\n"
-                + "If it(one of them) is a switch, use:\n"
-                + "$ walt device config <device> type=switch\n",
+                "If it(one of them) is a switch, use:\n"
+                "$ walt device config <device> type=switch\n",
                 unknown_neighbors,
                 None,
                 "device",

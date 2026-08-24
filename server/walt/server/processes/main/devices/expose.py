@@ -1,4 +1,5 @@
 import re
+
 from walt.common.tcp import server_socket
 from walt.server.tools import NonBlockingSocket
 
@@ -40,9 +41,14 @@ class DeviceToClientForwarder(NonBlockingSocket):
         self._s_to_client = s_to_client
         self._send_buffer = b""
         self._label = f"Connection forwarder to {device_ip}:{device_port}"
-        NonBlockingSocket.__init__(self, ev_loop,
-                    device_ip, device_port, SOCKET_TO_DEVICE_TIMEOUT,
-                    timeout_on_read=False)
+        NonBlockingSocket.__init__(
+            self,
+            ev_loop,
+            device_ip,
+            device_port,
+            SOCKET_TO_DEVICE_TIMEOUT,
+            timeout_on_read=False,
+        )
 
     def on_connect(self):
         # "self" manages device -> client forwarding
@@ -95,8 +101,7 @@ class DeviceToClientForwarder(NonBlockingSocket):
 
 class ExposeRedirect:
 
-    def __init__(self, manager, server_port,
-                 device_ip, device_port):
+    def __init__(self, manager, server_port, device_ip, device_port):
         self._ev_loop = manager.server.ev_loop
         self.server_port = server_port
         self.device_ip = device_ip
@@ -119,7 +124,8 @@ class ExposeRedirect:
         # connection will be managed after (and if) we manage to connect to the
         # device.
         self.forwarder = DeviceToClientForwarder(
-                self._ev_loop, s_to_client, self.device_ip, self.device_port)
+            self._ev_loop, s_to_client, self.device_ip, self.device_port
+        )
         self.forwarder.start_connect()
 
     def close(self):
@@ -140,15 +146,17 @@ class ExposeManager:
         self.redirects = {}
 
     def parse_expose_setting_value(self, setting_value):
-        if setting_value != "none" and \
-           re.match(r"^\d+:\d+(,\d+:\d+)*$", setting_value) is None:
+        if (
+            setting_value != "none"
+            and re.match(r"^\d+:\d+(,\d+:\d+)*$", setting_value) is None
+        ):
             return (False,)
         _redirects = []
         if setting_value != "none":
             for redirect in setting_value.split(","):
-                device_port_s, server_port_s = redirect.split(':')
+                device_port_s, server_port_s = redirect.split(":")
                 _redirects.append((int(device_port_s), int(server_port_s)))
-        return (True, _redirects)
+        return True, _redirects
 
     def check_expose_setting_value(self, requester, device_ip, setting_value):
         parsed = self.parse_expose_setting_value(setting_value)
@@ -166,12 +174,12 @@ class ExposeManager:
         device_ports, server_ports = tuple(zip(*redirects))
         if len(set(device_ports)) < len(redirects):
             requester.stderr.write(
-                  "Failed: cannot use several times the same device port number.\n"
+                "Failed: cannot use several times the same device port number.\n"
             )
             return False
         if len(set(server_ports)) < len(redirects):
             requester.stderr.write(
-                  "Failed: cannot use several times the same server port number.\n"
+                "Failed: cannot use several times the same server port number.\n"
             )
             return False
         for device_port, server_port in redirects:
@@ -181,29 +189,28 @@ class ExposeManager:
                 check, err = self.check_bind_port(server_port)
                 if not check:
                     requester.stderr.write(
-                            f"Failed: cannot use server port '{server_port}': {err}.\n"
+                        f"Failed: cannot use server port '{server_port}': {err}.\n"
                     )
                     return False
-            else:
-                # this port is already in use for a redirect, check if this
-                # is for the same device we are currently configuring.
-                if device_ip != redir.device_ip:
-                    requester.stderr.write(
-                      f"Failed: server port '{server_port}' is already used "
-                      "for another redirect.\n"
-                    )
-                    return False
+            # this port is already in use for a redirect, check if this
+            # is for the same device we are currently configuring.
+            elif device_ip != redir.device_ip:
+                requester.stderr.write(
+                    f"Failed: server port '{server_port}' is already used "
+                    "for another redirect.\n"
+                )
+                return False
         return True
 
     def check_bind_port(self, server_port):
         try:
             s = server_socket(server_port)
         except OSError as e:
-            return (False, e.strerror)
+            return False, e.strerror
         except Exception as e:
-            return (False, str(e))
+            return False, str(e)
         s.close()
-        return (True, None)
+        return True, None
 
     def add_redirect(self, requester, server_port, device_ip, device_port):
         check, err = self.check_bind_port(server_port)
@@ -212,8 +219,10 @@ class ExposeManager:
             redir.start()
             self.redirects[server_port] = redir
         else:
-            logline = (f"Failed to expose {device_ip}:{device_port} "
-                       "on server:{server_port}: {err} (bypassing)\n")
+            logline = (
+                f"Failed to expose {device_ip}:{device_port} "
+                "on server:{server_port}: {err} (bypassing)\n"
+            )
             if requester is None:
                 self.server.logs.platform_log("expose", line=logline, error=True)
             else:
@@ -224,9 +233,10 @@ class ExposeManager:
         assert parsed[0] is True
         new_redirects = set(parsed[1])
         old_redirects = set(
-                (redir.device_port, redir.server_port)
-                for redir in self.redirects.values()
-                if redir.device_ip == device_ip)
+            (redir.device_port, redir.server_port)
+            for redir in self.redirects.values()
+            if redir.device_ip == device_ip
+        )
         # stop old redirects
         for device_port, server_port in old_redirects - new_redirects:
             redir = self.redirects.pop(server_port)

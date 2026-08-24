@@ -1,12 +1,13 @@
 import errno
 import itertools
 import json
-import numpy as np
 import socket
 import sys
 from ipaddress import IPv4Address, ip_address, ip_network
-from time import time, sleep
+from time import sleep, time
 from typing import Union
+
+import numpy as np
 
 from walt.common.evloop import POLL_OPS_READ, POLL_OPS_WRITE
 from walt.common.formatting import COLUMNATE_SPACING
@@ -17,7 +18,7 @@ JSON_HTTP_RETRIES = 3
 
 
 def np_record_to_dict(record):
-    return dict(zip(record.dtype.names,record))
+    return dict(zip(record.dtype.names, record))
 
 
 def np_recarray_to_tuple_of_dicts(arr_src):
@@ -25,9 +26,9 @@ def np_recarray_to_tuple_of_dicts(arr_src):
         return ()
     fields = arr_src.dtype.names
     num_fields, num_items = len(fields), arr_src.size
-    arr = np.empty((2*num_fields, num_items), object)
-    arr[0:2*num_fields:2] = np.array(fields).reshape((num_fields, 1))
-    arr[1:2*num_fields:2] = [arr_src[f] for f in fields]
+    arr = np.empty((2 * num_fields, num_items), object)
+    arr[0 : 2 * num_fields : 2] = np.array(fields).reshape((num_fields, 1))
+    arr[1 : 2 * num_fields : 2] = [arr_src[f] for f in fields]
     arr = arr.T.reshape((num_items, num_fields, 2))
     return tuple(map(dict, arr))
 
@@ -53,6 +54,7 @@ def try_encode(s, encoding):
 
 def format_node_models_list(node_models):
     from walt.server.autoglob import autoglob
+
     return autoglob(node_models)
 
 
@@ -62,6 +64,7 @@ SOFT_RLIMIT_NOFILE = 16384
 
 def set_rlimits():
     import resource
+
     soft_limit, hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
     resource.setrlimit(resource.RLIMIT_NOFILE, (SOFT_RLIMIT_NOFILE, hard_limit))
 
@@ -80,8 +83,10 @@ async def async_json_http_get(
         ssl_opt = None  # default setting of ssl option = verification enabled
     else:
         ssl_opt = False
-    import aiohttp
     import asyncio
+
+    import aiohttp
+
     for _ in range(JSON_HTTP_RETRIES):
         aiohttp_timeout = aiohttp.ClientTimeout(total=timeout)
         # note: trust_env=True ensure any HTTP[S]_PROXY env variable
@@ -94,8 +99,7 @@ async def async_json_http_get(
                     json_body = await response.json()
                     if return_links:
                         return json_body, links
-                    else:
-                        return json_body
+                    return json_body
         except asyncio.TimeoutError:
             await asyncio.sleep(1.0)
             continue
@@ -105,6 +109,7 @@ async def async_json_http_get(
 async def async_gather_tasks(tasks):
     # make sure all asyncio tasks are run up to their result or exception
     import asyncio
+
     results = await asyncio.gather(*tasks, return_exceptions=True)
     for res in results:
         if isinstance(res, Exception):
@@ -114,6 +119,7 @@ async def async_gather_tasks(tasks):
 
 async def async_merge_generators(*generators):
     from aiostream import stream
+
     merged_generator = stream.merge(*generators)
     async with merged_generator.stream() as streamer:
         async for item in streamer:
@@ -140,8 +146,7 @@ def get_walt_adm_subnet():
     walt_adm_conf = conf["network"].get("walt-adm", None)
     if walt_adm_conf is None:
         return None
-    else:
-        return net(walt_adm_conf["ip"])
+    return net(walt_adm_conf["ip"])
 
 
 def ip_in_walt_network(input_ip):
@@ -155,14 +160,13 @@ def ip_in_walt_adm_network(input_ip):
     subnet = get_walt_adm_subnet()
     if subnet is None:
         return False
-    else:
-        return ip(input_ip) in subnet
+    return ip(input_ip) in subnet
 
 
 def get_dns_servers() -> [Union[str, IPv4Address]]:
     local_server_is_dns_server = False
     dns_list = []
-    with open("/etc/resolv.conf", "r") as f:
+    with open("/etc/resolv.conf") as f:
         for line in f:
             line = line.strip()
             if len(line) == 0:
@@ -202,8 +206,7 @@ def ensure_text_file_content(path, content):
 def add_image_repo(fullname):
     if fullname.startswith("walt/"):
         return "localhost/" + fullname
-    else:
-        return "docker.io/" + fullname
+    return "docker.io/" + fullname
 
 
 def get_registry_labels():
@@ -227,8 +230,9 @@ def get_clone_url_locations():
 def parse_date(created_at):
     import re
     from datetime import datetime
+
     # add a space before the ending timezone offset
-    created_at = re.sub(r"([+-][0-9][0-9:.]*)$", r" \1",  created_at)
+    created_at = re.sub(r"([+-][0-9][0-9:.]*)$", r" \1", created_at)
     # interpret 'T' and 'Z'
     created_at = created_at.replace("T", " ").replace("Z", " +0000")
     # keep only the first 3 words (timezone is sometimes repeated as text)
@@ -236,10 +240,9 @@ def parse_date(created_at):
     # strptime does not support parsing nanosecond precision
     # remove last 3 decimals of this number
     created_at = re.sub(r"([0-9]{6})[0-9]*", r"\1", created_at)
-    if '.' in created_at:
+    if "." in created_at:
         return datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S.%f %z")
-    else:
-        return datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S %z")
+    return datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S %z")
 
 
 def np_str_pattern(pattern):
@@ -273,14 +276,13 @@ def np_columnate(tabular_data, shrink_empty_cols=False, align=None):
     align = np.array(list(align))
     # turn tabular_data into a 2-dimensions str array
     col_names = np.array(tabular_data.dtype.names)
-    data = np.concatenate(
-            [tabular_data[field].astype(str) for field in col_names])
+    data = np.concatenate([tabular_data[field].astype(str) for field in col_names])
     data = data.reshape(len(col_names), len(tabular_data))
     # sanitize
-    data[data == 'None'] = ""
+    data[data == "None"] = ""
     # print col name "compatibility:tuple" as "compatibility"
     # print col name "in_use" as "in-use"
-    pretty_col_names = np.char.partition(col_names, ":")[:,0]
+    pretty_col_names = np.char.partition(col_names, ":")[:, 0]
     pretty_col_names = np.char.replace(pretty_col_names, "_", "-")
     # add col name and sep lines (empty for now)
     data = np.insert(data, 0, "", axis=1)
@@ -289,10 +291,10 @@ def np_columnate(tabular_data, shrink_empty_cols=False, align=None):
     lengths = np.char.str_len(data)
     # remove empty cols
     if shrink_empty_cols:
-        max_data_lengths = np.max(lengths[:,2:], axis=1)
+        max_data_lengths = np.max(lengths[:, 2:], axis=1)
         if not max_data_lengths.all():
             # at least one column is empty
-            cols_mask = (max_data_lengths > 0)
+            cols_mask = max_data_lengths > 0
             lengths = lengths[cols_mask]
             data = data[cols_mask]
             col_names = col_names[cols_mask]
@@ -306,29 +308,44 @@ def np_columnate(tabular_data, shrink_empty_cols=False, align=None):
     # set header sep line
     data[1] = np.char.ljust(data[1], cols_width, "-")
     # align
-    cols_align_left = (align == "<")
+    cols_align_left = align == "<"
     if cols_align_left.any():
-        data[:,cols_align_left] = np.char.ljust(
-                data[:,cols_align_left], cols_width[cols_align_left])
-    cols_align_right = (align == ">")
+        data[:, cols_align_left] = np.char.ljust(
+            data[:, cols_align_left], cols_width[cols_align_left]
+        )
+    cols_align_right = align == ">"
     if cols_align_right.any():
-        data[:,cols_align_right] = np.char.rjust(
-                data[:,cols_align_right], cols_width[cols_align_right])
+        data[:, cols_align_right] = np.char.rjust(
+            data[:, cols_align_right], cols_width[cols_align_right]
+        )
     # separate columns with two spaces
     spaces = COLUMNATE_SPACING * " "
-    data[:,1:] = np.char.add(spaces, data[:,1:])
+    data[:, 1:] = np.char.add(spaces, data[:, 1:])
     # finalize formatting
-    data[:-1,-1] = np.char.add(data[:-1,-1], "\n")
+    data[:-1, -1] = np.char.add(data[:-1, -1], "\n")
     return "".join(data.flat)
 
 
 def get_rpi_foundation_mac_vendor_ids(zero_padded=True):
     if zero_padded:
-        return ("28:cd:c1", "b8:27:eb", "d8:3a:dd", "dc:a6:32", "e4:5f:01",
-                "2c:cf:67", "88:a2:9e")
-    else:
-        return ("28:cd:c1", "b8:27:eb", "d8:3a:dd", "dc:a6:32", "e4:5f:1",
-                "2c:cf:67", "88:a2:9e")
+        return (
+            "28:cd:c1",
+            "b8:27:eb",
+            "d8:3a:dd",
+            "dc:a6:32",
+            "e4:5f:01",
+            "2c:cf:67",
+            "88:a2:9e",
+        )
+    return (
+        "28:cd:c1",
+        "b8:27:eb",
+        "d8:3a:dd",
+        "dc:a6:32",
+        "e4:5f:1",
+        "2c:cf:67",
+        "88:a2:9e",
+    )
 
 
 def non_blocking_connect(sock, ip, port):
@@ -350,9 +367,16 @@ class NonBlockingSocket:
         WAITING_WRITE = 3
         CLOSED = 4
 
-    def __init__(self, ev_loop, ip, port, timeout_secs=15,
-                 timeout_on_connect=True, timeout_on_read=True,
-                 timeout_on_write=True):
+    def __init__(
+        self,
+        ev_loop,
+        ip,
+        port,
+        timeout_secs=15,
+        timeout_on_connect=True,
+        timeout_on_read=True,
+        timeout_on_write=True,
+    ):
         self.ev_loop = ev_loop
         self.ip = ip
         self.port = port
@@ -371,8 +395,9 @@ class NonBlockingSocket:
         # we set a timeout on the event loop
         self.timeout_id = next(self.timeout_ids)
         timeout_at = time() + self.timeout_secs
-        self.ev_loop.plan_event(ts=timeout_at, callback=self.on_timeout,
-                                timeout_id = self.timeout_id)
+        self.ev_loop.plan_event(
+            ts=timeout_at, callback=self.on_timeout, timeout_id=self.timeout_id
+        )
 
     def start_connect(self):
         # connect call should not block, thus we use non-blocking mode
@@ -414,14 +439,13 @@ class NonBlockingSocket:
         self.timeout_id = -1
         if self.status == NonBlockingSocket.STATUS.CONNECTING:
             return self.on_connect()
-        elif self.status == NonBlockingSocket.STATUS.WAITING_READ:
+        if self.status == NonBlockingSocket.STATUS.WAITING_READ:
             return self.on_read_ready()
-        elif self.status == NonBlockingSocket.STATUS.WAITING_WRITE:
+        if self.status == NonBlockingSocket.STATUS.WAITING_WRITE:
             return self.on_write_ready()
-        elif self.status == NonBlockingSocket.STATUS.CLOSED:
+        if self.status == NonBlockingSocket.STATUS.CLOSED:
             return False
-        else:
-            raise Exception(f"Unexpected status {self.status}")
+        raise Exception(f"Unexpected status {self.status}")
 
     def send(self, *args, **kwargs):
         return self.sock.send(*args, **kwargs)
@@ -468,11 +492,15 @@ def convert_query_param_value(value, value_type):
             value = json.loads(value)
             value = value_type(value)
         except Exception:
-            return (False, {
-                "code": 400,
-                "message": (
-                    f"cannot interpret '{value}' as a '{value_type.__name__}'.")
-            })
+            return (
+                False,
+                {
+                    "code": 400,
+                    "message": (
+                        f"cannot interpret '{value}' as a '{value_type.__name__}'."
+                    ),
+                },
+            )
     return (True, value)
 
 
@@ -480,10 +508,10 @@ def filter_items_with_query_params(items, field_types, query_params):
     for field, value in query_params.items():
         field_type = field_types.get(field, None)
         if field_type is None:
-            return (False, {
-                "code": 400,
-                "message": f"'{field}' is not a valid filtering field."
-            })
+            return (
+                False,
+                {"code": 400, "message": f"'{field}' is not a valid filtering field."},
+            )
         if len(value) == 0:
             continue
         res = convert_query_param_value(value, field_type)
@@ -495,8 +523,9 @@ def filter_items_with_query_params(items, field_types, query_params):
 
 
 def get_podman_client():
-    from walt.server.const import PODMAN_API_SOCK_PATH
     from podman import PodmanClient
+
+    from walt.server.const import PODMAN_API_SOCK_PATH
 
     c = PodmanClient(base_url=f"http+unix://{PODMAN_API_SOCK_PATH}")
     # When an HTTP_PROXY is defined, requests & urllib3 libraries
@@ -510,7 +539,8 @@ def get_podman_client():
 class NetworkBuf:
     def __init__(self, s):
         self._s = s
-        self._buf = b''
+        self._buf = b""
+
     def read(self, length):
         while len(self._buf) < length:
             chunk = self._s.recv(4096)
@@ -520,23 +550,30 @@ class NetworkBuf:
         res = self._buf[:length]
         self._buf = self._buf[length:]
         return res
+
     def write(self, buf):
-        while (len(buf) > 0):
+        while len(buf) > 0:
             length = self._s.send(buf)
             buf = buf[length:]
+
     def sendfile(self, f, offset, length):
         self._s.sendfile(f, offset, length)
+
     def pending_buflen(self):
         return len(self._buf)
+
     def fileno(self):
         return self._s.fileno()
+
     def close(self):
         self._s.close()
 
 
 def NetworkMsg(fmt, *static_args):
     import struct
+
     length = struct.calcsize(fmt)
+
     class NetworkMsgCls:
         @staticmethod
         def read(netbuf):
@@ -544,34 +581,36 @@ def NetworkMsg(fmt, *static_args):
             t = struct.unpack(fmt, buf)
             if len(t) == 1:
                 return t[0]
-            else:
-                return t
+            return t
+
         @classmethod
         def format(cls, *args):
             return struct.pack(fmt, *(static_args + args))
+
         @classmethod
         def write(cls, netbuf, *args):
             buf = cls.format(*args)
             netbuf.write(buf)
+
     return NetworkMsgCls
 
 
 class TTLCache:
     def __init__(self):
         self._cache = {}
+
     def get(self, item):
         if item in self._cache:
             deadline, delay, value = self._cache.pop(item)
             if deadline < time():
                 # obsolete
                 return (False,)
-            else:
-                # still valid
-                deadline = time() + delay
-                self._cache[item] = (deadline, delay, value)
-                return (True, value)
-        else:
-            return (False,)
+            # still valid
+            deadline = time() + delay
+            self._cache[item] = (deadline, delay, value)
+            return (True, value)
+        return (False,)
+
     def save(self, item, value, delay):
         deadline = time() + delay
         self._cache[item] = (deadline, delay, value)
@@ -580,17 +619,20 @@ class TTLCache:
 def ttl_cache(delay):
     def ttl_cache_decorator(f):
         cache = TTLCache()
+
         def decorated(*args, **kwargs):
             import pickle
+
             h = pickle.dumps((args, kwargs))
             cache_result = cache.get(h)
             if cache_result[0] is True:
                 return cache_result[1]
-            else:
-                result = f(*args, **kwargs)
-                cache.save(h, result, delay)
-                return result
+            result = f(*args, **kwargs)
+            cache.save(h, result, delay)
+            return result
+
         return decorated
+
     return ttl_cache_decorator
 
 

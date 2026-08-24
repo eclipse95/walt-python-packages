@@ -1,6 +1,7 @@
 import functools
-import numpy as np
 import sys
+
+import numpy as np
 
 from walt.server.processes.main.workflow import Workflow
 
@@ -29,27 +30,30 @@ class PoEManager:
             nodes_ko = nodes[mask_poe_error]
             errors = self._build_dict_errors(nodes_ko.name, nodes_ko.poe_error)
             return nodes_ok, nodes_ko, errors
-        else:
-            return nodes, nodes[:0], {}
+        return nodes, nodes[:0], {}
 
     def restore_poe_on_all_ports(self):
         sw_ports_info = self._get_poe_switch_ports_off()
         if len(sw_ports_info) > 0:
-            wf = Workflow([self._wf_multiple_sw_ports_set_poe,
-                           self._wf_end_of_restore_poe],
-                          sw_ports_info=sw_ports_info,
-                          poe_status=True)
+            wf = Workflow(
+                [self._wf_multiple_sw_ports_set_poe, self._wf_end_of_restore_poe],
+                sw_ports_info=sw_ports_info,
+                poe_status=True,
+            )
             wf.run()
 
     def wf_rescan_restore_poe_on_switch_ports(self, wf, requester, devices, **env):
         sw_ports_info = self._get_poe_switch_ports_off(devices)
         if len(sw_ports_info) > 0:
             self._print_req_stderr(requester, WARNING_DEVICE_RESCAN_POE_OFF)
-            wf.insert_steps([self._wf_multiple_sw_ports_set_poe,
-                             self._wf_end_of_restore_poe,
-                             self._wf_after_rescan_restore_poe])
-            wf.update_env(sw_ports_info=sw_ports_info,
-                          poe_status=True)
+            wf.insert_steps(
+                [
+                    self._wf_multiple_sw_ports_set_poe,
+                    self._wf_end_of_restore_poe,
+                    self._wf_after_rescan_restore_poe,
+                ]
+            )
+            wf.update_env(sw_ports_info=sw_ports_info, poe_status=True)
         wf.next()
 
     def wf_nodes_set_poe(self, wf, nodes, poe_status, reason=None, **env):
@@ -62,8 +66,9 @@ class PoEManager:
         assert "poe_error" in nodes.dtype.names
         assert (nodes.poe_error is None).all()
         wf.update_env(sw_ports_info=nodes)
-        wf.insert_steps([self._wf_multiple_sw_ports_set_poe,
-                         self._wf_end_of_nodes_set_poe])
+        wf.insert_steps(
+            [self._wf_multiple_sw_ports_set_poe, self._wf_end_of_nodes_set_poe]
+        )
         wf.next()
 
     def _wf_end_of_nodes_set_poe(self, wf, nodes, poe_results, **env):
@@ -71,39 +76,46 @@ class PoEManager:
         nodes_ok = nodes[mask_succeeded]
         nodes_ko = nodes[~mask_succeeded]
         poe_errors = poe_results[~mask_succeeded]
-        errors = self._build_dict_errors(nodes_ko.name,
-                                         poe_results[~mask_succeeded].error)
-        wf.update_env(nodes_ok=nodes_ok,
-                      poe_errors=errors)
+        errors = self._build_dict_errors(
+            nodes_ko.name, poe_results[~mask_succeeded].error
+        )
+        wf.update_env(nodes_ok=nodes_ok, poe_errors=errors)
         wf.next()
 
     def _wf_multiple_sw_ports_set_poe(self, wf, sw_ports_info, **env):
-        poe_results = np.empty(sw_ports_info.size,
-                        dtype=[("retcode", int), ("error", object)]).view(np.recarray)
+        poe_results = np.empty(
+            sw_ports_info.size, dtype=[("retcode", int), ("error", object)]
+        ).view(np.recarray)
         wf.update_env(poe_results=poe_results)
         wf.insert_steps([self._wf_after_multiple_sw_ports_set_poe])
         wf.map_as_parallel_steps(self._wf_sw_port_set_poe, sw_ports_info, poe_results)
         wf.next()
 
     def _wf_sw_port_set_poe(self, wf, sw_port_info, poe_result, poe_status, **env):
-        cb = functools.partial(self._wf_save_poe_result, wf, sw_port_info,
-                               poe_result, **env)
+        cb = functools.partial(
+            self._wf_save_poe_result, wf, sw_port_info, poe_result, **env
+        )
         status_arg = "on" if poe_status is True else "off"
         self.server.ev_loop.do(
-                f"walt-set-poe {sw_port_info.sw_ip} {sw_port_info.sw_port} "
-                f"{status_arg} "
-                f"{sw_port_info.sw_snmp_version} {sw_port_info.sw_snmp_community}",
-                cb, silent=False, catch_stderr=True)
+            f"walt-set-poe {sw_port_info.sw_ip} {sw_port_info.sw_port} "
+            f"{status_arg} "
+            f"{sw_port_info.sw_snmp_version} {sw_port_info.sw_snmp_community}",
+            cb,
+            silent=False,
+            catch_stderr=True,
+        )
 
-    def _wf_save_poe_result(self, wf, sw_port_info, poe_result, retcode, stderr_msg,
-                            **env):
+    def _wf_save_poe_result(
+        self, wf, sw_port_info, poe_result, retcode, stderr_msg, **env
+    ):
         poe_result.retcode = retcode
         if retcode != 0:
             poe_result.error = stderr_msg.strip().decode("ascii")
         wf.next()
 
-    def _wf_after_multiple_sw_ports_set_poe(self, wf, sw_ports_info, poe_status,
-                                            poe_results, reason=None, **env):
+    def _wf_after_multiple_sw_ports_set_poe(
+        self, wf, sw_ports_info, poe_status, poe_results, reason=None, **env
+    ):
         # record the changes in database where the operation succeeded
         mask_succeeded = poe_results.retcode == 0
         sw_ports_ok = sw_ports_info[mask_succeeded]
@@ -128,8 +140,7 @@ class PoEManager:
             # selected switches
             device_macs = tuple(devices.mac)
             sw_ports_info = self.server.db.execute(
-                sql + """ AND sw_d.mac IN %s""",
-                (device_macs,)
+                sql + """ AND sw_d.mac IN %s""", (device_macs,)
             )
         return sw_ports_info
 
@@ -155,7 +166,7 @@ class PoEManager:
                         sw_ports_desc = f"{sw_name} ports {sw_ports_list}"
                     messages.append(
                         "WARNING: Failed to restore PoE on switch "
-                        + f"{sw_ports_desc} -- {error}!"
+                        f"{sw_ports_desc} -- {error}!"
                     )
                     err_ports = err_ports[~sw_mask]
                 ports_ko = ports_ko[~err_mask]
@@ -169,8 +180,9 @@ class PoEManager:
             requester.stderr.write(f"{msg}\n")
             requester.stderr.flush()
 
-    def _wf_end_of_restore_poe(self, wf, sw_ports_info, poe_results,
-                               requester=None, **env):
+    def _wf_end_of_restore_poe(
+        self, wf, sw_ports_info, poe_results, requester=None, **env
+    ):
         messages = self._format_poe_error_messages(sw_ports_info, poe_results)
         if len(messages) > 0:
             self._print_req_stderr(requester, "\n".join(messages))

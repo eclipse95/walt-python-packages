@@ -4,7 +4,7 @@ import re
 import struct
 import termios
 
-TTY_CONTROL_CHARS = "".join(map(chr, list(range(0, 32)) + list(range(127, 160))))
+TTY_CONTROL_CHARS = "".join(map(chr, list(range(32)) + list(range(127, 160))))
 TTY_CONTROL_CHARS_RE = re.compile("[%s]" % re.escape(TTY_CONTROL_CHARS))
 
 

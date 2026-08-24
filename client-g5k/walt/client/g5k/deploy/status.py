@@ -89,18 +89,17 @@ def fix_info(info, allow_expired):
             return None
         info["status"] = "expired"
         return info
-    else:
-        # we recompute the 'status' from history
-        # (it changes depending on whether we are before or after the scheduled start)
-        last_ts, last_label = None, None
-        for label, ts in info["history"].items():
-            if ts > now:
-                continue
-            if last_ts is None or last_ts < ts:
-                last_ts, last_label = ts, label
-        if last_label is not None:
-            info["status"] = last_label
-        return info
+    # we recompute the 'status' from history
+    # (it changes depending on whether we are before or after the scheduled start)
+    last_ts, last_label = None, None
+    for label, ts in info["history"].items():
+        if ts > now:
+            continue
+        if last_ts is None or last_ts < ts:
+            last_ts, last_label = ts, label
+    if last_label is not None:
+        info["status"] = last_label
+    return info
 
 
 def load_status_file(status_file, allow_expired):

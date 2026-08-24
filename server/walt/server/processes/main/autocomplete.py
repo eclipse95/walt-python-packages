@@ -1,5 +1,6 @@
-import numpy as np
 from time import time
+
+import numpy as np
 
 from walt.server.processes.main.workflow import Workflow
 
@@ -85,8 +86,9 @@ def complete_image(server, requester, username):
     return names + implicit_names
 
 
-def wf_fs_remote_completions(wf, server, requester,
-        entity_type, entity, partial_token, possible, **env):
+def wf_fs_remote_completions(
+    wf, server, requester, entity_type, entity, partial_token, possible, **env
+):
     # '<entity>:<remote-path>' pattern
     # we need to complete the remote path
     # caution: images may have a tag, i.e. pattern is '<name>:<tag>:<remote-path>'
@@ -95,7 +97,7 @@ def wf_fs_remote_completions(wf, server, requester,
     # exploring a possible 'teleworker' image (with its implicit ':latest' tag)
     # looking for files starting with 'test:/'...
     if ":" in partial_remote_path:
-        wf.next()   # nothing more to add to "possible" list
+        wf.next()  # nothing more to add to "possible" list
         return
     fs = None
     if entity_type == "node":
@@ -114,8 +116,7 @@ def wf_fs_remote_completions(wf, server, requester,
 
 def wf_fs_after_ping(wf, alive, filesystem, **env):
     if alive:
-        wf.insert_steps([filesystem.wf_get_completions,
-                         wf_after_get_completions])
+        wf.insert_steps([filesystem.wf_get_completions, wf_after_get_completions])
     wf.next()
 
 
@@ -127,12 +128,13 @@ def wf_after_get_completions(wf, entity, possible, remote_completions, **env):
 def get_cp_entities(server, requester, username, entity_type):
     if entity_type == "node":
         return complete_node(server, username)
-    elif entity_type == "image":
+    if entity_type == "image":
         return complete_image(server, requester, username)
 
 
-def wf_complete_cp_src(wf, server, requester, username,
-        entity_type, partial_token, **env):
+def wf_complete_cp_src(
+    wf, server, requester, username, entity_type, partial_token, **env
+):
     possible = []
     if ":" not in partial_token:
         possible += list(requester.filesystem.get_completions(partial_token))
@@ -147,8 +149,9 @@ def wf_complete_cp_src(wf, server, requester, username,
     wf.next()
 
 
-def wf_complete_cp_dst(wf, server, requester, username,
-        entity_type, src_token, partial_dst_token, **env):
+def wf_complete_cp_dst(
+    wf, server, requester, username, entity_type, src_token, partial_dst_token, **env
+):
     possible = []
     src_is_remote = ":" in src_token
     dst_is_remote = not src_is_remote
@@ -192,16 +195,16 @@ def complete_device_config_param(server, requester, argv):
     # set intersection operation.
     setting_names = np.bitwise_and.reduce(setting_names_sets)
     # match only those which start with partial_token
-    return tuple(f"{name}=" for name in setting_names
-                     if name.startswith(partial_token))
+    return tuple(f"{name}=" for name in setting_names if name.startswith(partial_token))
 
 
 def complete_port_config_param(server, partial_token):
     # we will just help the user with the setting names, not the values
     if "=" in partial_token:
         return ()
-    return tuple(f"{name}=" for name in
-                 server.port_settings.get_writable_setting_names())
+    return tuple(
+        f"{name}=" for name in server.port_settings.get_writable_setting_names()
+    )
 
 
 def get_walt_clone_urls(server, username):
@@ -237,18 +240,15 @@ def complete_history_range(server, username, partial_token):
         start, end = partial_token.split(":", maxsplit=1)
         if end.startswith("-"):
             return ()  # let the user input the relative date
-        else:
-            possible_end_bound = ("-<relative-time>", "") + checkpoints
-            return tuple(f"{start}:{p_end}" for p_end in possible_end_bound)
-    else:
-        start = partial_token
-        if start.startswith("-"):
-            return ()  # let the user input the relative date
-        else:
-            possible_start_bound = ("full", "none", "-<relative-time>:", ":") + tuple(
-                f"{cp}:" for cp in checkpoints
-            )
-            return possible_start_bound
+        possible_end_bound = ("-<relative-time>", "") + checkpoints
+        return tuple(f"{start}:{p_end}" for p_end in possible_end_bound)
+    start = partial_token
+    if start.startswith("-"):
+        return ()  # let the user input the relative date
+    possible_start_bound = ("full", "none", "-<relative-time>:", ":") + tuple(
+        f"{cp}:" for cp in checkpoints
+    )
+    return possible_start_bound
 
 
 def complete_image_registry(partial_token):
@@ -263,16 +263,15 @@ def wf_shell_autocomplete_switch(wf, task, server, requester, username, argv, **
     if arg_type in ("NODE_CP_SRC", "NODE_CP_DST", "IMAGE_CP_SRC", "IMAGE_CP_DST"):
         entity_type, _, src_or_dst = arg_type.lower().split("_")
         if src_or_dst == "src":
-            wf.update_env(
-                entity_type=entity_type,
-                partial_token=partial_token)
+            wf.update_env(entity_type=entity_type, partial_token=partial_token)
             wf.insert_steps([wf_complete_cp_src])
         else:
             prev_token = argv[-2]
             wf.update_env(
                 entity_type=entity_type,
                 src_token=prev_token,
-                partial_dst_token=partial_token)
+                partial_dst_token=partial_token,
+            )
             wf.insert_steps([wf_complete_cp_dst])
         wf.next()
     else:
@@ -356,9 +355,8 @@ def wf_filter_possible(wf, argv, possible, **env):
             if item == partial_token:
                 # so if we could not complete more, return ''
                 return ""
-            else:
-                # and if we could complete more, use our special trick
-                possible = mark_incomplete(item)
+            # and if we could complete more, use our special trick
+            possible = mark_incomplete(item)
     elif len(possible) == 2:
         # if 2nd possible image is <1st>:latest, keep <1st> only
         if (
@@ -379,7 +377,7 @@ def wf_return_result(wf, task, possible, debug, t0=None, **env):
 
 
 def shell_autocomplete(server, task, requester, username, argv, debug=False):
-    env=dict(
+    env = dict(
         server=server,
         task=task,
         requester=requester,
@@ -390,9 +388,5 @@ def shell_autocomplete(server, task, requester, username, argv, debug=False):
     if debug:
         env.update(t0=time())
     task.set_async()
-    wf = Workflow([wf_shell_autocomplete,
-                   wf_filter_possible,
-                   wf_return_result],
-                   **env
-    )
+    wf = Workflow([wf_shell_autocomplete, wf_filter_possible, wf_return_result], **env)
     wf.run()

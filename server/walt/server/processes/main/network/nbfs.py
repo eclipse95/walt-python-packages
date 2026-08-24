@@ -49,7 +49,6 @@ def update_image_exports(root_paths, subnet):
             nbfsd_ctl_sock.send(b"RELOAD_CONF")
             resp = nbfsd_ctl_sock.recv(1024)
             if resp != b"OK":
-                print("Error: RELOAD_CONF request to nbfsd failed.",
-                      file=sys.stderr)
+                print("Error: RELOAD_CONF request to nbfsd failed.", file=sys.stderr)
         except Exception as e:
             print(f"Error: sending RELOAD_CONF request to nbfsd failed: {e}")

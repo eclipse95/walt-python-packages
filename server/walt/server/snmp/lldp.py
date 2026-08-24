@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 import functools
-import numpy as np
 import re
+
+import numpy as np
 
 from walt.server.diskcache import DISK_CACHE
 from walt.server.snmp.base import (
@@ -146,6 +147,7 @@ class LLDPProxy(VariantProxy):
 # The following functions must be callable even if the switch does
 # not support reporting LLDP data through SNMP, so we declare them
 # as module functions.
+
 
 def get_port_number_from_lldp_label(sw_ip, sw_port_lldp_label):
     cache_key_all = ("all-lldp-pl", sw_ip)

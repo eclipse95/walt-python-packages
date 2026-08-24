@@ -3,6 +3,7 @@ import re
 import sys
 
 from plumbum.cli.terminal import ask, prompt
+
 from walt.client.g5k.recipes.const import (
     DEFAULT_SCHEDULING,
     DEFAULT_WALLTIME,
@@ -75,15 +76,14 @@ def get_recipe_info(recipe_name, expected=True):
     if recipe_file.exists():
         if expected is True or expected is None:
             return json.loads(recipe_file.read_text())
-        elif expected is False:
+        if expected is False:
             sys.stderr.write(ERROR_RECIPE_NAME_EXISTS)
             sys.exit(1)
-    else:
-        if expected is True:
-            sys.stderr.write(ERROR_RECIPE_NOT_FOUND)
-            sys.exit(1)
-        elif expected is False or expected is None:
-            return None
+    elif expected is True:
+        sys.stderr.write(ERROR_RECIPE_NOT_FOUND)
+        sys.exit(1)
+    elif expected is False or expected is None:
+        return None
 
 
 def save_recipe(recipe_name, recipe_info):

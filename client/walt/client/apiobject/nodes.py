@@ -49,8 +49,7 @@ class APINodeInfoCache(APIItemInfoCache):
         is_virtual = node_info["virtual"]
         if is_virtual:
             return server.remove_vnode(item_name)
-        else:
-            return server.forget(item_name)
+        return server.forget(item_name)
 
     def do_rename_item(self, server, item_name, new_item_name):
         return server.rename(item_name, new_item_name)
@@ -62,13 +61,9 @@ __info_cache__ = APINodeInfoCache()
 class APINodeBase:
     """Base class of all APINode classes, for use in isinstance()"""
 
-    pass
-
 
 class APISetOfNodesBase:
     """Base class of all APISetOfNodes classes, for use in isinstance()"""
-
-    pass
 
 
 class Tools:
@@ -85,11 +80,10 @@ class Tools:
             else:
                 image = get_image_from_name(image)
                 image_name_or_default = image.name
+        elif isinstance(image, APIImageBase):
+            image_name_or_default = image.name
         else:
-            if isinstance(image, APIImageBase):
-                image_name_or_default = image.name
-            else:
-                raise ParameterNotAnImageException()
+            raise ParameterNotAnImageException()
         return image_name_or_default
 
     @staticmethod
@@ -230,7 +224,7 @@ class APINodeFactory:
                         logs_cnt = server.count_logs(
                             history=(None, None),
                             issuers=set([self.name]),
-                            exclude_consoles=True
+                            exclude_consoles=True,
                         )
                         if logs_cnt > 0:
                             raise NodeHasLogsException()
@@ -296,8 +290,9 @@ class APISetOfNodesFactory:
                 for n in self:
                     n._check_owned_or_force(force)
                 with silent_server_link() as server:
-                    server.reboot_nodes(Tools.get_comma_nodeset(self),
-                                        hard_only=hard_only)
+                    server.reboot_nodes(
+                        Tools.get_comma_nodeset(self), hard_only=hard_only
+                    )
 
             def wait(self, timeout=-1):
                 """Wait until all nodes of this set are booted"""

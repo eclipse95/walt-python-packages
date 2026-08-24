@@ -68,8 +68,7 @@ class Cmd:
                     try:
                         retcode = popen.wait(timeout=1)
                         if retcode != 0:
-                            raise Exception(
-                                f'Command returned exit code {retcode}')
+                            raise Exception(f"Command returned exit code {retcode}")
                         break
                     except subprocess.TimeoutExpired:
                         popen.terminate()
@@ -114,16 +113,14 @@ def run_cmd_on_site(
             monitoring = cmd.run_and_follow()
             next(monitoring)  # wait for command startup
             return monitoring
-        else:
-            info = cmd.run()
-            return info.stdout
+        info = cmd.run()
+        return info.stdout
     except subprocess.CalledProcessError as e:
         if err_out:
             print(e, file=sys.stderr)
             print(e.stdout, file=sys.stderr)
             raise
-        else:
-            return e
+        return e
 
 
 def oarstat(info, site):
@@ -166,9 +163,8 @@ def set_vlan(info, site, vlan_id, *nodes):
         if retries == 0:
             # stop retrying!
             break
-        else:
-            time.sleep(KAVLAN_FAILURE_DELAY)
-            continue
+        time.sleep(KAVLAN_FAILURE_DELAY)
+        continue
     # still not progressing after 3 tries
     raise Exception(
         f"kavlan failed to attach vlan {vlan_id} on " + ", ".join(remaining_nodes)

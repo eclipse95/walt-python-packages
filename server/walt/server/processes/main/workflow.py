@@ -5,6 +5,7 @@ import sys
 class Workflow:
     _next_id = 0
     _instances = {}
+
     def __init__(self, steps, **env):
         self._id = Workflow._next_id
         Workflow._next_id += 1
@@ -12,7 +13,7 @@ class Workflow:
         self._env = env
         self._end_callbacks = []
         Workflow._instances[self._id] = self
-        #print(f"new {self}")
+        # print(f"new {self}")
 
     def __repr__(self):
         return f"<Workflow{self._id}>"
@@ -29,10 +30,10 @@ class Workflow:
             step, self._steps = self._steps[0], self._steps[1:]
             env = self._env.copy()
             env.update(**kwargs)
-            #print(f"<Workflow{self._id}>.next()", step)
+            # print(f"<Workflow{self._id}>.next()", step)
             step(self, *args, **env)
         elif not self.done:  # because wf.interrupt() may be called at any time
-            #print(f"<Workflow{self._id}> end")
+            # print(f"<Workflow{self._id}> end")
             end_callbacks = self._end_callbacks
             self._end_callbacks = None
             for cb in end_callbacks:
@@ -71,7 +72,7 @@ class Workflow:
     @staticmethod
     def _wf_run_parallel_steps(wf, _parallel_steps, **env):
         num_parallel_steps = len(_parallel_steps)
-        wf.update_env(_remaining_parallel_steps = num_parallel_steps)
+        wf.update_env(_remaining_parallel_steps=num_parallel_steps)
         wf.insert_steps([wf._wf_after_one_parallel_step] * num_parallel_steps)
         for step in _parallel_steps:
             step(wf, **env)
@@ -82,10 +83,10 @@ class Workflow:
         if _remaining_parallel_steps == 0:
             wf.next()  # all parallel steps are done
         else:
-            wf.update_env(_remaining_parallel_steps = _remaining_parallel_steps)
+            wf.update_env(_remaining_parallel_steps=_remaining_parallel_steps)
 
     def insert_parallel_steps(self, steps):
-        self.update_env(_parallel_steps = steps)
+        self.update_env(_parallel_steps=steps)
         self.insert_steps([self._wf_run_parallel_steps])
 
     @staticmethod
@@ -103,7 +104,7 @@ class Workflow:
         self.insert_parallel_steps(steps)
 
     def continue_after_other_workflow(self, other_wf):
-        #print("continue_after_other_workflow")
+        # print("continue_after_other_workflow")
         other_wf._end_callbacks.append(self.next)
 
     def print_missed(self):

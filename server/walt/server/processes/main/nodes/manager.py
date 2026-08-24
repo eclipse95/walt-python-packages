@@ -1,11 +1,10 @@
 import base64
 import random
-
 from pathlib import Path
 
 from walt.server.const import (
-        SSH_NODE_COMMAND,
-        NODE_SSH_ECDSA_HOST_KEY_PUB_PATH,
+    NODE_SSH_ECDSA_HOST_KEY_PUB_PATH,
+    SSH_NODE_COMMAND,
 )
 from walt.server.popen import BetterPopen
 from walt.server.processes.main.filesystem import FilesystemsCache
@@ -16,11 +15,9 @@ from walt.server.processes.main.nodes.powersave import PowersaveManager
 from walt.server.processes.main.nodes.reboot import reboot_nodes
 from walt.server.processes.main.nodes.register import handle_registration_request
 from walt.server.processes.main.nodes.show import show
-from walt.server.processes.main.nodes.webapi import web_api_list_nodes
-from walt.server.processes.main.nodes.status import (
-        NodeBootupStatusManager
-)
+from walt.server.processes.main.nodes.status import NodeBootupStatusManager
 from walt.server.processes.main.nodes.wait import WaitInfo
+from walt.server.processes.main.nodes.webapi import web_api_list_nodes
 from walt.server.processes.main.workflow import Workflow
 from walt.server.tools import get_server_ip, get_walt_subnet, ip
 
@@ -38,12 +35,12 @@ CMD_START_VNODE = (
     "walt-virtual-node --hostname %(name)s --mac %(mac)s --ip %(ip)s --model %(model)s"
     "                  --server-ip %(server_ip)s --cpu-cores %(cpu_cores)d"
     "                  --ram %(ram)s --disks %(disks)s --networks %(networks)s"
-  """                  --netmask %(netmask)s --gateway "%(gateway)s" """
+    """                  --netmask %(netmask)s --gateway "%(gateway)s" """
     "                  --boot-delay %(boot_delay)s --managed"
 )
 
 
-class NodesManager(object):
+class NodesManager:
     def __init__(self, server):
         self.server = server
         self.db = server.db
@@ -61,8 +58,10 @@ class NodesManager(object):
         self.vnodes = {}
         self.powersave = PowersaveManager(server)
         self.node_register_kwargs = dict(
-            images=server.images.store, dhcpd=server.dhcpd,
-            named=server.named, registry=server.registry
+            images=server.images.store,
+            dhcpd=server.dhcpd,
+            named=server.named,
+            registry=server.registry,
         )
         self._cleaning_up = False
 
@@ -152,7 +151,7 @@ class NodesManager(object):
     def blink(self, requester, task, node_name, blink_status):
         if self._cleaning_up:
             task.return_result(False)
-            return
+            return None
         req = "BLINK %d" % int(blink_status)
         node = self.get_node_info(requester, node_name)
         if node is None:
@@ -174,8 +173,10 @@ class NodesManager(object):
                 random.randint(0, 255),
                 random.randint(0, 255),
             )
-            if (self.db.select_unique("devices", mac=free_mac) is None and
-                self.db.select_unique("vpnauth", vpnmac=free_mac) is None):
+            if (
+                self.db.select_unique("devices", mac=free_mac) is None
+                and self.db.select_unique("vpnauth", vpnmac=free_mac) is None
+            ):
                 return free_mac  # ok, mac is free
 
     def generate_vnode_info(self):
@@ -213,7 +214,7 @@ class NodesManager(object):
         popen = BetterPopen(
             self.ev_loop,
             cmd,
-            lambda popen: popen.stdin.write(b'EXIT\n'),
+            lambda popen: popen.stdin.write(b"EXIT\n"),
             shell=False,
         )
         listener = self.logs.monitor_file(popen.stdout, node.ip, "virtualconsole")
@@ -223,7 +224,7 @@ class NodesManager(object):
         if self._cleaning_up:
             return
         popen = self.vnodes[node_mac][0]
-        popen.stdin.write(b'KILL_VM\n')
+        popen.stdin.write(b"KILL_VM\n")
 
     def vnode_console_input(self, node_mac, buf):
         if self._cleaning_up:
@@ -234,7 +235,7 @@ class NodesManager(object):
         if buf == b"\x01":
             buf = b"\x01\x01"
         popen = self.vnodes[node_mac][0]
-        popen.stdin.write(b'INPUT ' + base64.b64encode(buf) + b'\n')
+        popen.stdin.write(b"INPUT " + base64.b64encode(buf) + b"\n")
 
     def vnode_update_vm_setting(self, node_mac, setting_name, setting_value):
         if self._cleaning_up:
@@ -297,12 +298,19 @@ class NodesManager(object):
     def reboot_node_set(self, requester, task, node_set, hard_only, reboot_cause):
         nodes = self.parse_node_set(requester, node_set)
         if nodes is None:
-            return None  # error already reported
+            return  # error already reported
         task.set_async()
         self.reboot_nodes(requester, task.return_result, nodes, hard_only, reboot_cause)
 
-    def reboot_nodes(self, requester, task_callback, nodes, hard_only, reboot_cause,
-                     reset_boot_retries=True):
+    def reboot_nodes(
+        self,
+        requester,
+        task_callback,
+        nodes,
+        hard_only,
+        reboot_cause,
+        reset_boot_retries=True,
+    ):
         if reset_boot_retries:
             self.status_manager.reset_boot_retries(nodes)
         reboot_nodes(
@@ -344,8 +352,7 @@ class NodesManager(object):
     def validate_cp_entity(self, requester, node_name, index, **info):
         if self.get_node_info(requester, node_name) is None:
             return "FAILED"
-        else:
-            return "OK"
+        return "OK"
 
     def get_node_filesystem(self, requester, node_name):
         node_ip = self.get_node_ip(requester, node_name)

@@ -1,6 +1,5 @@
 import os
 import re
-import socket
 import sys
 from select import select
 
@@ -45,7 +44,7 @@ def console_loop(server, conn, node_info):
                     esc_sequence = True
                     continue
                 # <ctrl-a> <a> or <ctrl-a> <ctrl-a>: send <ctrl-a>
-                elif desc_buf == (True, b"a") or desc_buf == (True, b"\x01"):
+                if desc_buf == (True, b"a") or desc_buf == (True, b"\x01"):
                     buf = b"\x01"
                     esc_sequence = False
                 # <ctrl-a> <d>: disconnect
@@ -57,7 +56,7 @@ def console_loop(server, conn, node_info):
                     continue
                 server.vnode_console_input(node_info["mac"], buf)
                 # os.write(1, (repr(buf) + '\r\n').encode('ascii'))
-            except socket.error:
+            except OSError:
                 break
 
 

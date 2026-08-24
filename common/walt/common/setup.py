@@ -2,15 +2,18 @@ import sys
 from pathlib import Path
 
 from plumbum import cli
+
 try:
-    from pkg_resources import resource_stream # remove in Python 3.12+
+    from pkg_resources import resource_stream  # remove in Python 3.12+
 except ImportError:
     import importlib.resources
+
     def resource_stream(package, filename):
         ref = importlib.resources.files(package).joinpath(filename)
-        with ref.open('rb') as fp:
+        with ref.open("rb") as fp:
             my_bytes = fp.read()
         return my_bytes
+
 
 from walt.common import busybox_init, systemd
 from walt.common.systemd import SYSTEMD_DEFAULT_DIR
@@ -57,8 +60,7 @@ class WaltGenericSetup(cli.Application):
             )
 
     def filter_out_missing_units(self, systemd_services):
-        return [unit for unit in systemd_services
-                if self.systemd_unit_exists(unit)]
+        return [unit for unit in systemd_services if self.systemd_unit_exists(unit)]
 
     def disable_systemd_services(self, systemd_services):
         self._assert_init_is({"SYSTEMD", None})
@@ -121,10 +123,10 @@ class WaltGenericSetup(cli.Application):
         sys.stdout.flush()
         # create command walt-python3 which starts the python interpreter
         # of the current venv (even if called outside).
-        walt_python3 = venv_bin / 'walt-python3'
+        walt_python3 = venv_bin / "walt-python3"
         walt_python3.write_text(
-            "#!/bin/sh\n"
-            f'exec {str(venv_bin.absolute())}/python3 "$@"\n')
+            "#!/bin/sh\n" f'exec {venv_bin.absolute()!s}/python3 "$@"\n'
+        )
         walt_python3.chmod(0o755)
         # create symlinks /usr/local/bin/walt-* -> <venv>/bin/walt-*
         for venv_entry in venv_bin.iterdir():

@@ -1,28 +1,34 @@
-import bottle
 import json
 import os
-import sdnotify
 import shlex
 import socket
-import walt
-
 from functools import lru_cache
+from importlib.resources import files
+from pathlib import Path
+from time import time
+
+import bottle
+import sdnotify
+from gevent import subprocess
 from gevent.fileobject import FileObject
 from gevent.lock import RLock as Lock
 from gevent.pywsgi import WSGIServer
-from gevent import subprocess
-from pathlib import Path
-from time import time
+
+import walt
 from walt.common.apilink import ServerAPILink
 from walt.common.constants import WALT_SERVER_TCP_PORT
+from walt.common.tcp import MyPickle as pickle
 from walt.common.tcp import Requests as TcpRequests
-from walt.common.tcp import MyPickle as pickle, client_sock_file
+from walt.common.tcp import client_sock_file
 from walt.common.unix import Requests as UnixRequests
 from walt.common.unix import bind_to_random_sockname, recv_msg_fds
 from walt.server.const import UNIX_SERVER_SOCK_PATH
-from walt.server.tools import np_recarray_to_tuple_of_dicts, convert_query_param_value
-from walt.server.tools import ttl_cache, get_server_ip
-from importlib.resources import files
+from walt.server.tools import (
+    convert_query_param_value,
+    get_server_ip,
+    np_recarray_to_tuple_of_dicts,
+    ttl_cache,
+)
 
 WALT_HTTPD_PORT = 80
 
@@ -107,26 +113,22 @@ def _query_main_daemon(req_id, args, kwargs, msglen, maxfds):
             if resp["status"] == "OK":
                 if maxfds > 0:
                     return fds
-                elif "response_text" in resp:
+                if "response_text" in resp:
                     return resp["response_text"]
-                else:
-                    return "OK\n"
-            else:
-                assert "error_msg" in resp
-                error = resp["error_msg"]
-                continue
+                return "OK\n"
+            assert "error_msg" in resp
+            error = resp["error_msg"]
+            continue
         except OSError as e:
             if i == 0:
                 # try to re-init the socket to walt-server-daemon
                 s_conn.close()
                 s_conn = None
                 continue
-            else:
-                return bottle.HTTPError(500, str(e))
+            return bottle.HTTPError(500, str(e))
     if error == "NO SUCH FILE":
         return bottle.HTTPError(404, "No such file.")
-    else:
-        return bottle.HTTPError(400, error)
+    return bottle.HTTPError(400, error)
 
 
 def requester_ip():
@@ -168,8 +170,7 @@ def dump_ssh_entrypoint_host_keys():
 
 
 def dump_ssh_pubkey_cert():
-    return dump_generated_file("ssh-pubkey-cert",
-                               node_ip=requester_ip())
+    return dump_generated_file("ssh-pubkey-cert", node_ip=requester_ip())
 
 
 def notify_systemd():
@@ -223,10 +224,7 @@ def _get_logs(ts_from, ts_to, ts_unit, issuers, streams_regexp):
         pass
     finally:
         f.close()
-    return dict(
-            num_logs=len(all_logs),
-            logs=all_logs
-    )
+    return dict(num_logs=len(all_logs), logs=all_logs)
 
 
 _cache_context = {}
@@ -247,21 +245,17 @@ def _generate_boot_sig(key):
     boot_img_content = boot_img.read()
     boot_img.close()
     cmd = "openssl dgst -sha256 -hex"
-    res = subprocess.run(shlex.split(cmd),
-                         input=boot_img_content,
-                         capture_output=True)
+    res = subprocess.run(shlex.split(cmd), input=boot_img_content, capture_output=True)
     sha256 = res.stdout.decode().split()[1]
     cmd = f"openssl dgst -sign {HTTP_BOOT_SERVER_PRIV_KEY} -sha256 -hex"
-    res = subprocess.run(shlex.split(cmd),
-                         input=boot_img_content,
-                         capture_output=True)
+    res = subprocess.run(shlex.split(cmd), input=boot_img_content, capture_output=True)
     rsa2048 = res.stdout.decode().split()[1]
     ts = int(time())
     return f"{sha256}\nts: {ts}\nrsa2048: {rsa2048}\n"
 
 
 def get_boot_sig(fd):
-    stat =  os.fstat(fd)
+    stat = os.fstat(fd)
     key = (stat.st_ino, stat.st_mtime, stat.st_size)
     _cache_context.update(fd=fd)
     return _generate_boot_sig(key)
@@ -274,8 +268,10 @@ def generate_boot_server_keys():
         subprocess.run(shlex.split(cmd), check=True)
     if not HTTP_BOOT_SERVER_PUB_KEY.exists():
         HTTP_BOOT_SERVER_PUB_KEY.parent.mkdir(parents=True, exist_ok=True)
-        cmd = (f"openssl rsa -in {HTTP_BOOT_SERVER_PRIV_KEY} "
-               f"-out {HTTP_BOOT_SERVER_PUB_KEY} -pubout -outform PEM")
+        cmd = (
+            f"openssl rsa -in {HTTP_BOOT_SERVER_PRIV_KEY} "
+            f"-out {HTTP_BOOT_SERVER_PUB_KEY} -pubout -outform PEM"
+        )
         subprocess.run(shlex.split(cmd), check=True)
 
 
@@ -289,9 +285,10 @@ class MyBottle(bottle.Bottle):
                     bottle.response.content_type = "text/plain"
                     return error.body + "\n"
                 if error_format == "json":
-                    bottle.response.content_type = 'application/json'
-                    return json.dumps(dict(error = error.body,
-                                           status_code = error.status_code))
+                    bottle.response.content_type = "application/json"
+                    return json.dumps(
+                        dict(error=error.body, status_code=error.status_code)
+                    )
         return super().default_error_handler(error)
 
 
@@ -309,7 +306,7 @@ def run():
 
     @app.route("/favicon.ico")
     def favicon():
-        bottle.redirect('/doc/_static/logo-walt.png')
+        bottle.redirect("/doc/_static/logo-walt.png")
 
     @app.route("/boot/<path:path>")
     def serve_boot(path):
@@ -320,14 +317,14 @@ def run():
         node_ip = bottle.request.query.get("node_ip")
         if node_ip is None:
             node_ip = requester_ip()
-        fd = open_from_server_daemon(node_ip=node_ip, path="/"+path)
+        fd = open_from_server_daemon(node_ip=node_ip, path="/" + path)
         bottle.response.add_header("Content-Length", os.fstat(fd).st_size)
         return FileObject(fd, mode="rb")
 
     @app.route("/walt-vpn/per-ip/<path:path>")
     def serve_vpn_per_mac(path):
-        ip_dash, path = path.split('/', maxsplit=1)
-        ip = ip_dash.replace('-', '.')
+        ip_dash, path = path.split("/", maxsplit=1)
+        ip = ip_dash.replace("-", ".")
         if path == "boot.sig":
             # this file is generated from boot.img on the fly
             # because it includes a signature using the VPN private key
@@ -335,15 +332,14 @@ def run():
             content = get_boot_sig(fd)
             os.close(fd)
             return content
-        else:
-            fd = open_from_server_daemon(node_ip=ip, path="/"+path)
-            bottle.response.add_header("Content-Length", os.fstat(fd).st_size)
-            return FileObject(fd, mode="rb")
+        fd = open_from_server_daemon(node_ip=ip, path="/" + path)
+        bottle.response.add_header("Content-Length", os.fstat(fd).st_size)
+        return FileObject(fd, mode="rb")
 
-    @app.route("/walt-vpn/enroll", method='POST')
+    @app.route("/walt-vpn/enroll", method="POST")
     def serve_vpn_enroll():
         node_ip = requester_ip()
-        pubkey = bottle.request.files.get('ssh-pubkey')
+        pubkey = bottle.request.files.get("ssh-pubkey")
         if pubkey is None:
             return bottle.HTTPError(400, "Public key not provided.")
         return vpn_enroll(node_ip, pubkey.file)
@@ -359,7 +355,7 @@ def run():
     @app.route("/walt-vpn/node-conf/http-path")
     def serve_vpn_http_path():
         node_ip = requester_ip()
-        node_ip_dash = node_ip.replace('.', '-')
+        node_ip_dash = node_ip.replace(".", "-")
         return f"walt-vpn/per-ip/{node_ip_dash}"
 
     @app.route("/walt-vpn/node-conf/vpn-mac")
@@ -380,8 +376,9 @@ def run():
 
     @app.route("/walt-vpn/node-conf/public.pem")
     def serve_http_boot_public_pem():
-        return bottle.static_file(HTTP_BOOT_SERVER_PUB_KEY.name,
-                                  str(HTTP_BOOT_SERVER_PUB_KEY.parent))
+        return bottle.static_file(
+            HTTP_BOOT_SERVER_PUB_KEY.name, str(HTTP_BOOT_SERVER_PUB_KEY.parent)
+        )
 
     # This route can be used to manually check that an HTTP VPN endpoint
     # properly redirects "/walt-vpn/<something>" URLs here.
@@ -396,7 +393,7 @@ def run():
     @app.route("/doc")
     @app.route("/doc")
     def redirect_doc():
-        bottle.redirect('/doc/')
+        bottle.redirect("/doc/")
 
     @app.route("/doc/")
     @app.route("/doc/<path:path>")
@@ -419,12 +416,13 @@ def run():
     @app.route("/api/v1/logs")
     def api_v1_logs():
         query_params = dict(bottle.request.query.decode())
-        ts_from = query_params.get("from", None)
-        ts_to = query_params.get("to", None)
+        ts_from = query_params.get("from")
+        ts_to = query_params.get("to")
         ts_unit = query_params.get("ts_unit", "s")
         if ts_from is None or ts_to is None:
-            return bottle.HTTPError(400,
-                    "Query parameters 'from' and 'to' are required.")
+            return bottle.HTTPError(
+                400, "Query parameters 'from' and 'to' are required."
+            )
         res = convert_query_param_value(ts_from, float)
         if not res[0]:
             return bottle.HTTPError(400, res[1])
@@ -439,21 +437,27 @@ def run():
             ts_from *= 0.001
             ts_to *= 0.001
         else:
-            return bottle.HTTPError(400,
-                    "Query parameter 'ts_unit' should be 's' (seconds)" +
-                    " or 'ms' (milliseconds)")
+            return bottle.HTTPError(
+                400,
+                "Query parameter 'ts_unit' should be 's' (seconds)"
+                " or 'ms' (milliseconds)",
+            )
         now = time()
         for param, ts in (("ts_from", ts_from), ("ts_to", ts_to)):
             if ts < WALT_T0:
-                return bottle.HTTPError(400,
-                    f"Query parameter '{param}' is invalid " +
-                    "(earlier than WALT project startup date!)")
+                return bottle.HTTPError(
+                    400,
+                    f"Query parameter '{param}' is invalid "
+                    "(earlier than WALT project startup date!)",
+                )
             if ts > now + 2:  # allow time desynchronization up to 2 seconds
-                return bottle.HTTPError(400,
-                    f"Query parameter '{param}' is invalid, " +
-                    "it refers to a date in the future.\n" +
-                    "Note: you can use 'ts_unit' query parameter to specify " +
-                    "the unit (i.e. 's' for seconds, 'ms' for milliseconds).")
+                return bottle.HTTPError(
+                    400,
+                    f"Query parameter '{param}' is invalid, "
+                    "it refers to a date in the future.\n"
+                    "Note: you can use 'ts_unit' query parameter to specify "
+                    "the unit (i.e. 's' for seconds, 'ms' for milliseconds).",
+                )
         stream = query_params.get("stream", "")
         streams_regexp = f"^{stream}$" if stream != "" else None
         issuer = query_params.get("issuer", "")
@@ -461,6 +465,6 @@ def run():
         return _get_logs(ts_from, ts_to, ts_unit, issuers, streams_regexp)
 
     # run web app
-    server = WSGIServer(('', WALT_HTTPD_PORT), app)
+    server = WSGIServer(("", WALT_HTTPD_PORT), app)
     notify_systemd()
     server.serve_forever()

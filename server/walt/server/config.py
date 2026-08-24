@@ -1,4 +1,5 @@
 """Server configuration management."""
+
 import copy
 import sys
 from ipaddress import ip_network
@@ -49,24 +50,18 @@ def sanitize_conf(conf):
         vpnconf = conf["vpn"]
         if "enabled" in vpnconf:
             if vpnconf["enabled"]:
-                attrs = set((
-                    'enabled',
-                    'ssh-entrypoint',
-                    'http-entrypoint',
-                    'boot-mode'))
+                attrs = set(
+                    ("enabled", "ssh-entrypoint", "http-entrypoint", "boot-mode")
+                )
                 if set(vpnconf.keys()) != attrs:
                     # invalid, discard
                     conf["vpn"] = {"enabled": False}
-            else:
-                # enabled=No but other VPN conf attributes specified,
-                # auto fix by removing other attributes
-                if len(vpnconf) > 1:
-                    conf["vpn"] = {"enabled": False}
+            # enabled=No but other VPN conf attributes specified,
+            # auto fix by removing other attributes
+            elif len(vpnconf) > 1:
+                conf["vpn"] = {"enabled": False}
         else:
-            attrs = set((
-                'ssh-entrypoint',
-                'http-entrypoint',
-                'boot-mode'))
+            attrs = set(("ssh-entrypoint", "http-entrypoint", "boot-mode"))
             if set(vpnconf.keys()) == attrs:
                 # early VPN deployments did not have the "enabled" attr
                 # but this one seemed to be configured.

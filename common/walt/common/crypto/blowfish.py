@@ -1,15 +1,11 @@
-"""
-Based on the implementation of Kirby Urner, Oregon Curriculum Network
-"""
+"""Based on the implementation of Kirby Urner, Oregon Curriculum Network"""
 
 from binascii import hexlify, unhexlify
 
 
-class BlowFish(object):
+class BlowFish:
     def __init__(self, key, bitlength=448):
-        """
-        key is an integer of bitlength (32 to 448) bits
-        """
+        """key is an integer of bitlength (32 to 448) bits"""
         self.loadhexpi()
         # ensure bitlength is valid
         bitlength = min(448, max(32, bitlength))
@@ -46,8 +42,7 @@ class BlowFish(object):
                 self.sbox[i][j], self.sbox[i][j + 1] = output >> 32, output & 0xFFFFFFFF
 
     def bfencrypt(self, x):
-        """
-        Main encryption algorithm
+        """Main encryption algorithm
         x is a 64 bits integer
         """
         # Divide 64-bit chunk into left and right halves
@@ -69,11 +64,9 @@ class BlowFish(object):
         return (xL << 32) | xR
 
     def bfdecrypt(self, x):
-        """
-        Main decryption algorithm
+        """Main decryption algorithm
         same algorithm as encrypt, but in reverse order
         """
-
         # Divide 64-bit chunk into left and right halves
         xL = x >> 32
         xR = x & 0xFFFFFFFF
@@ -143,23 +136,20 @@ class BlowFish(object):
         return outstring.decode("UTF-8")
 
     def mkchunk(self, chrs):
-        """
-        Accept a string of characters and return a
+        """Accept a string of characters and return a
         long integer made from corresponding bytes
         """
         return int(hexlify(chrs), 16)
 
     def mkbytes(self, in_int):
-        """
-        Accept a long integer and return a corresponding
+        """Accept a long integer and return a corresponding
         string of characters (bytes), left-padding to 8 bytes
         """
         instr = (("0" * 16) + hex(in_int)[2:])[-16:]
         return unhexlify(instr)
 
     def loadhexpi(self):
-        """
-        =============================================================
+        """=============================================================
         The hex digits of pi, arranged as four s_boxes & one p_array,
         as per the Blowfish default. These have passed muster w/ Eric
         Young's set of test vectors. Enjoy.  -Mike Schaudies

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from multiprocessing import set_start_method
+
 from walt.server.process import EvProcessesManager
 from walt.server.processes.blocking.process import ServerBlockingProcess
 from walt.server.processes.db.process import ServerDBProcess
@@ -8,7 +9,7 @@ from walt.server.processes.main.process import ServerMainProcess
 
 
 def run():
-    set_start_method('spawn')
+    set_start_method("spawn")
     # create the process manager
     tman = EvProcessesManager()
     # create db process

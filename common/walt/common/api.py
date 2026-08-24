@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 explorer = None
 
 
@@ -12,7 +11,7 @@ def register_api_explorer(expl):
 # (we cannot rename these attributes here, their 'name'
 # belongs to the class. That's why we need
 # the other decorator @api below.)
-class APIExposedMethod(object):
+class APIExposedMethod:
     def __init__(self, func):
         self.func = func
 
@@ -25,7 +24,7 @@ def api_expose_method(func):
 # attributes that must be exposed, compute a decorated
 # __init__ function, that will rename the attrs at the
 # end of the provided constructor.
-class APIDecoratedInit(object):
+class APIDecoratedInit:
     def __init__(self, attrs, init_func):
         self.attrs = attrs
 

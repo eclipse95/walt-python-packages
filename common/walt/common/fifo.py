@@ -45,7 +45,7 @@ def failsafe_mkfifo(path, mode=None):
 # (select(), etc.).
 
 
-class ReadableFifo(object):
+class ReadableFifo:
     def __init__(self, path):
         self.path = path
 

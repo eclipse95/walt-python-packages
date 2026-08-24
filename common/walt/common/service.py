@@ -54,6 +54,7 @@ class GenericServer:
 
     def shutdown(self):
         import socket
+
         if self.s is not None:
             self.s.shutdown(socket.SHUT_RDWR)
             self._shutting_down = True

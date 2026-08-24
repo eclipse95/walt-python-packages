@@ -13,13 +13,14 @@ from walt.common.tcp import TCPServer
 from walt.common.tools import do, format_image_fullname, parse_image_fullname
 from walt.common.version import __version__
 from walt.server import conf
-from walt.server.popen import BetterPopen
 from walt.server.const import (
-    NODE_SSH_ECDSA_HOST_KEY_PATH,
     NODE_DROPBEAR_ECDSA_HOST_KEY_PATH,
+    NODE_SSH_ECDSA_HOST_KEY_PATH,
 )
+from walt.server.popen import BetterPopen
 from walt.server.processes.main.apisession import APISession
 from walt.server.processes.main.autocomplete import shell_autocomplete
+from walt.server.processes.main.devices.expose import ExposeManager
 from walt.server.processes.main.devices.manager import DevicesManager
 from walt.server.processes.main.exports import FilesystemsExporter
 from walt.server.processes.main.images.manager import NodeImageManager
@@ -29,9 +30,9 @@ from walt.server.processes.main.network import tftp
 from walt.server.processes.main.network.dhcpd import DHCPServer
 from walt.server.processes.main.network.named import DNSServer
 from walt.server.processes.main.nodes.manager import NodesManager
+from walt.server.processes.main.poe import PoEManager
 from walt.server.processes.main.registry import WalTLocalRegistry
-from walt.server.processes.main.settings import SettingsManager, PortSettingsManager
-from walt.server.processes.main.devices.expose import ExposeManager
+from walt.server.processes.main.settings import PortSettingsManager, SettingsManager
 from walt.server.processes.main.transfer import (
     TransferManager,
     format_node_to_booted_image_transfer_cmd,
@@ -39,14 +40,13 @@ from walt.server.processes.main.transfer import (
 )
 from walt.server.processes.main.unix import UnixSocketServer
 from walt.server.processes.main.vpn import VPNManager
-from walt.server.processes.main.poe import PoEManager
 from walt.server.processes.main.workflow import Workflow
 from walt.server.tools import np_record_to_dict
 
 KVM_DEV_FILE = Path("/dev/kvm")
 
 
-class Server(object):
+class Server:
     def __init__(self, ev_loop, db, blocking):
         self.ev_loop = ev_loop
         self.db = db
@@ -80,15 +80,15 @@ class Server(object):
         # So we generate the openssh key with ssh-keygen and then
         # convert it with dropbearconvert.
         if not NODE_SSH_ECDSA_HOST_KEY_PATH.exists():
-            NODE_SSH_ECDSA_HOST_KEY_PATH.parent.mkdir(
-                    parents=True, exist_ok=True)
+            NODE_SSH_ECDSA_HOST_KEY_PATH.parent.mkdir(parents=True, exist_ok=True)
             # note: this also generates the .pub file
             do(f"ssh-keygen -t ecdsa -N '' -f {NODE_SSH_ECDSA_HOST_KEY_PATH}")
         if not NODE_DROPBEAR_ECDSA_HOST_KEY_PATH.exists():
-            NODE_DROPBEAR_ECDSA_HOST_KEY_PATH.parent.mkdir(
-                    parents=True, exist_ok=True)
-            do("dropbearconvert openssh dropbear "
-              f"{NODE_SSH_ECDSA_HOST_KEY_PATH} {NODE_DROPBEAR_ECDSA_HOST_KEY_PATH}")
+            NODE_DROPBEAR_ECDSA_HOST_KEY_PATH.parent.mkdir(parents=True, exist_ok=True)
+            do(
+                "dropbearconvert openssh dropbear "
+                f"{NODE_SSH_ECDSA_HOST_KEY_PATH} {NODE_DROPBEAR_ECDSA_HOST_KEY_PATH}"
+            )
 
     def prepare(self):
         self.prepare_keys()
@@ -132,8 +132,7 @@ class Server(object):
         tftp.update(self.db, self.images.store, cleanup=True)
         # exportfs will be called before image unmounts,
         # no need to call it twice
-        self.exports.update_persist_exports(
-                cleanup=True, run_exportfs=False)
+        self.exports.update_persist_exports(cleanup=True, run_exportfs=False)
         self.images.cleanup()
         self.nodes.cleanup()
         self.devices.cleanup()
@@ -148,11 +147,10 @@ class Server(object):
     def continue_evloop(self, t0):
         if BetterPopen.can_end_evloop() and Workflow.can_end_evloop():
             return False  # loop can be stopped
-        elif time() - t0 > 10.0:
+        if time() - t0 > 10.0:
             Workflow.cleanup_remaining_workflows()
             return False  # loop should be forcibly stopped
-        else:
-            return True   # loop should continue
+        return True  # loop should continue
 
     def get_registries(self):
         return tuple(
@@ -237,25 +235,25 @@ class Server(object):
         # 1. restore poe on switch ports
         # 2. let the blocking process do its job
         # 3. update network daemons and unblock the client
-        wf = Workflow([self.poe.wf_rescan_restore_poe_on_switch_ports,
-                       self._wf_device_rescan_blocking,
-                       self._wf_device_rescan_end])
-        wf.update_env(requester=requester,
-                      devices=devices,
-                      task=task)
+        wf = Workflow(
+            [
+                self.poe.wf_rescan_restore_poe_on_switch_ports,
+                self._wf_device_rescan_blocking,
+                self._wf_device_rescan_end,
+            ]
+        )
+        wf.update_env(requester=requester, devices=devices, task=task)
         wf.run()
 
     def _wf_device_rescan_blocking(self, wf, requester, devices, **env):
-        self.blocking.rescan_topology(
-            requester, wf.next, devices=devices
-        )
+        self.blocking.rescan_topology(requester, wf.next, devices=devices)
 
     def _wf_device_rescan_end(self, wf, res, task, **env):
         self.dhcpd.update()
         self.named.update()
         tftp.update(self.db, self.images.store)
         task.return_result(res)
-        wf.next()   # end the workflow
+        wf.next()  # end the workflow
 
     def report_lldp_neighbor(self, remote_ip, sw_mac, sw_port_lldp_label):
         # check arguments are valid
@@ -267,8 +265,10 @@ class Server(object):
             return
         # if neighbor device type was unknown, auto-convert to "switch"
         if sw_info.type == "unknown":
-            logline=(f"Node {node_info.name} is connected on {sw_info.name}, "
-                     f"so {sw_info.name} is a switch.")
+            logline = (
+                f"Node {node_info.name} is connected on {sw_info.name}, "
+                f"so {sw_info.name} is a switch."
+            )
             self.logs.platform_log("devices", line=logline)
             sw_info = np_record_to_dict(sw_info)
             sw_info.update(type="switch")
@@ -280,12 +280,13 @@ class Server(object):
             return
         # for the rest, call self.blocking
         self.blocking.report_lldp_neighbor(
-                sw_mac=sw_mac,
-                sw_ip=sw_info.ip,
-                sw_name=sw_info.name,
-                sw_port_lldp_label=sw_port_lldp_label,
-                node_mac=node_info.mac,
-                node_name=node_info.name)
+            sw_mac=sw_mac,
+            sw_ip=sw_info.ip,
+            sw_name=sw_info.name,
+            sw_port_lldp_label=sw_port_lldp_label,
+            node_mac=node_info.mac,
+            node_name=node_info.name,
+        )
 
     def forget_device(self, requester, task, device_name):
         device = self.devices.get_device_info(requester, device_name)
@@ -384,8 +385,13 @@ class Server(object):
     def create_vnode_using_image(self, name, mac, ip, model, image_fullname):
         # declare node in db
         self.devices.add_or_update(
-            type="node", model=model, ip=ip, mac=mac, name=name, virtual=True,
-            image=image_fullname
+            type="node",
+            model=model,
+            ip=ip,
+            mac=mac,
+            name=name,
+            virtual=True,
+            image=image_fullname,
         )
         self.nodes.register_node(mac=mac, model=model, image_fullname=image_fullname)
         # start background vm
@@ -402,8 +408,9 @@ class Server(object):
         self.nodes.forget_vnode(info.mac)
         return self.forget_device(requester, task, name)
 
-    def reboot_nodes_after_image_change(self,
-            requester, task_callback, *image_fullnames):
+    def reboot_nodes_after_image_change(
+        self, requester, task_callback, *image_fullnames
+    ):
         where_sql = "n.image IN (" + ",".join(["%s"] * len(image_fullnames)) + ")"
         nodes = self.devices.get_multiple_device_info(where_sql, image_fullnames)
         if nodes.size == 0:
@@ -423,8 +430,7 @@ class Server(object):
                 "nodes",
             )
         )
-        self.nodes.reboot_nodes(requester, task_callback, nodes, False,
-                "image change")
+        self.nodes.reboot_nodes(requester, task_callback, nodes, False, "image change")
 
     def image_shell_session_save(
         self, requester, cb_return, session, image_fullname, name_confirmed
@@ -526,7 +532,8 @@ class Server(object):
                 if not record_file.parent.name.startswith(f"walt_{component}-"):
                     continue
                 whl_name, whl_content = self.generate_whl(
-                        dist_packages, component, record_file)
+                    dist_packages, component, record_file
+                )
                 wheels[whl_name] = whl_content
         return wheels
 
@@ -535,7 +542,7 @@ class Server(object):
         whl_name = f"{versioned_component}-py3-none-any.whl"
         record_file = dist_packages / f"{versioned_component}.dist-info/RECORD"
         whl_file = io.BytesIO()  # in-memory file
-        with ZipFile(whl_file, 'w') as myzip:
+        with ZipFile(whl_file, "w") as myzip:
             filtered_record = ""
             for line in record_file.read_text().splitlines():
                 if line.startswith(".."):

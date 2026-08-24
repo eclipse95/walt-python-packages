@@ -1,10 +1,9 @@
 import signal
 
 from walt.common.tools import interrupt_print
-from walt.server.process import EvProcess
-from walt.server.process import SyncRPCProcessConnector
-from walt.server.processes.main.hub import HubRPCProcessConnector
+from walt.server.process import EvProcess, SyncRPCProcessConnector
 from walt.server.processes.main.blocking import BlockingTasksManager
+from walt.server.processes.main.hub import HubRPCProcessConnector
 from walt.server.spec import reload_server_spec
 
 
@@ -20,8 +19,7 @@ class ServerMainProcess(EvProcess):
     def __init__(self, tman, level):
         EvProcess.__init__(self, tman, "server-main", level)
         self.server = None  # not configured yet
-        self.db = SyncRPCProcessConnector(label="main-to-db",
-                                          serialize_reqs=True)
+        self.db = SyncRPCProcessConnector(label="main-to-db", serialize_reqs=True)
         tman.attach_file(self, self.db)
         self.blocking = BlockingTasksManager()
         tman.attach_file(self, self.blocking)
@@ -30,6 +28,7 @@ class ServerMainProcess(EvProcess):
 
     def prepare(self):
         from walt.server.processes.main.server import Server
+
         on_sighup_reload_conf()
         self.server = Server(self.ev_loop, self.db, self.blocking)
         self.hub.configure(self.server)
@@ -43,6 +42,7 @@ class ServerMainProcess(EvProcess):
 
     def notify_systemd(self):
         import os
+
         if "NOTIFY_SOCKET" in os.environ:
             import sdnotify
 

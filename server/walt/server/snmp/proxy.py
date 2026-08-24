@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from snimpy.manager import Manager
+
 from walt.server import const
 from walt.server.snmp.bridge import BridgeProxy
 from walt.server.snmp.lldp import LLDPProxy
@@ -8,7 +9,7 @@ from walt.server.snmp.poe import PoEProxy
 SNMP_OPTS = {"retries": 2, "timeout": const.SNMP_TIMEOUT, "cache": True}
 
 
-class Proxy(object):
+class Proxy:
     def __init__(self, host, snmp_conf, poe=False, lldp=False, bridge=False):
         opts = SNMP_OPTS.copy()
         opts.update(host=host)

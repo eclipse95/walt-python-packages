@@ -1,7 +1,8 @@
 import json
-import numpy as np
 import re
 from collections import defaultdict
+
+import numpy as np
 
 from walt.common.formatting import format_sentence
 from walt.common.netsetup import NetSetup
@@ -9,16 +10,18 @@ from walt.common.settings import parse_vnode_disks_value, parse_vnode_networks_v
 from walt.common.tools import do
 from walt.server.processes.main.network import tftp
 from walt.server.processes.main.nodes.manager import (
+    VNODE_DEFAULT_BOOT_DELAY,
     VNODE_DEFAULT_CPU_CORES,
     VNODE_DEFAULT_DISKS,
     VNODE_DEFAULT_NETWORKS,
     VNODE_DEFAULT_RAM,
-    VNODE_DEFAULT_BOOT_DELAY)
+)
 from walt.server.processes.main.nodes.status import (
     NODE_DEFAULT_BOOT_RETRIES,
     NODE_DEFAULT_BOOT_TIMEOUT,
-    NODE_MIN_BOOT_TIMEOUT)
-from walt.server.tools import np_record_to_dict, get_server_ip
+    NODE_MIN_BOOT_TIMEOUT,
+)
+from walt.server.tools import get_server_ip, np_record_to_dict
 
 PPRINT_NONE = "<unspecified>"
 
@@ -30,15 +33,13 @@ def uncapitalize(s):
 def pprint_netsetup(int_val):
     if int_val is None:
         return PPRINT_NONE
-    else:
-        return NetSetup(int_val).readable_string()
+    return NetSetup(int_val).readable_string()
 
 
 def pprint_bool(bool_val):
     if bool_val is None:
         return PPRINT_NONE
-    else:
-        return str(bool_val).lower()
+    return str(bool_val).lower()
 
 
 def parse_settings_args(requester, settings_args):
@@ -156,20 +157,55 @@ class SettingsManager:
             },
         }
         self.category_info = {
-            "devices": dict(mask=self.mask_all, settings={},
-                 defaults={}, priority=1, labels=("Device", "Devices")),
-            "server": dict(mask=self.mask_server, settings={},
-                 defaults={}, priority=3, labels=("Server", None)),
-            "walt-net-devices": dict(mask=self.mask_walt_net_devices, settings={},
-                 defaults={}, priority=2, labels=("Device", "Devices")),
-            "nodes": dict(mask=self.mask_nodes, settings={},
-                 defaults={}, priority=3, labels=("Node", "Nodes")),
-            "virtual-nodes": dict(mask=self.mask_virtual_nodes, settings={},
-                 defaults={}, priority=4, labels=("Virtual node", "Virtual nodes")),
-            "unknown-devices": dict(mask=self.mask_unknown_devices, settings={},
-                 defaults={}, priority=3, labels=("Unknown device", "Unknown devices")),
-            "switches": dict(mask=self.mask_switches, settings={},
-                 defaults={}, priority=3, labels=("Switch", "Switches")),
+            "devices": dict(
+                mask=self.mask_all,
+                settings={},
+                defaults={},
+                priority=1,
+                labels=("Device", "Devices"),
+            ),
+            "server": dict(
+                mask=self.mask_server,
+                settings={},
+                defaults={},
+                priority=3,
+                labels=("Server", None),
+            ),
+            "walt-net-devices": dict(
+                mask=self.mask_walt_net_devices,
+                settings={},
+                defaults={},
+                priority=2,
+                labels=("Device", "Devices"),
+            ),
+            "nodes": dict(
+                mask=self.mask_nodes,
+                settings={},
+                defaults={},
+                priority=3,
+                labels=("Node", "Nodes"),
+            ),
+            "virtual-nodes": dict(
+                mask=self.mask_virtual_nodes,
+                settings={},
+                defaults={},
+                priority=4,
+                labels=("Virtual node", "Virtual nodes"),
+            ),
+            "unknown-devices": dict(
+                mask=self.mask_unknown_devices,
+                settings={},
+                defaults={},
+                priority=3,
+                labels=("Unknown device", "Unknown devices"),
+            ),
+            "switches": dict(
+                mask=self.mask_switches,
+                settings={},
+                defaults={},
+                priority=3,
+                labels=("Switch", "Switches"),
+            ),
         }
         # fill settings and defaults for each category
         for setting_name, setting_info in self.settings_table.items():
@@ -315,7 +351,7 @@ class SettingsManager:
             error = parsing[1]
             requester.stderr.write(
                 f"Failed: {error}\n"
-                + "        Check 'walt help show device-config' for more info.\n"
+                "        Check 'walt help show device-config' for more info.\n"
             )
             return False
         return True
@@ -323,7 +359,7 @@ class SettingsManager:
     def correct_boot_delay(
         self, requester, device_infos, setting_name, setting_value, all_settings
     ):
-        if (setting_value == 'random'):
+        if setting_value == "random":
             return True
         if positive_int(setting_value):
             return True
@@ -365,7 +401,7 @@ class SettingsManager:
             requester.stderr.write(
                 f"Failed: A boot timeout of {setting_value}s is probably too small "
                 "for some OS images.\n"
-                f"        Only \"none\" and values higher than {NODE_MIN_BOOT_TIMEOUT}"
+                f'        Only "none" and values higher than {NODE_MIN_BOOT_TIMEOUT}'
                 " are allowed for this setting.\n"
             )
             return False
@@ -379,7 +415,7 @@ class SettingsManager:
             error = parsing[1]
             requester.stderr.write(
                 f"Failed: {error}\n"
-                + "        Check 'walt help show device-config' for more info.\n"
+                "        Check 'walt help show device-config' for more info.\n"
             )
             return False
         return True
@@ -399,16 +435,18 @@ class SettingsManager:
     ):
         if len(device_infos) > 1:
             requester.stderr.write(
-                  "Failed: cannot expose the same server port for several devices.\n")
+                "Failed: cannot expose the same server port for several devices.\n"
+            )
             return False
         return self.server.expose.check_expose_setting_value(
-                    requester, device_infos[0].ip, setting_value)
+            requester, device_infos[0].ip, setting_value
+        )
 
     def mask_all(self, requester, device_infos, setting_name):
         return np.ones(len(device_infos), dtype=bool)
 
     def mask_server(self, requester, device_infos, setting_name):
-        mask = (device_infos.type == "server")
+        mask = device_infos.type == "server"
         if requester is not None and not np.all(mask):
             dev_other = device_infos.name[~mask]
             msg = format_sentence(
@@ -423,7 +461,7 @@ class SettingsManager:
         return mask
 
     def mask_unknown_devices(self, requester, device_infos, setting_name):
-        mask = (device_infos.type == "unknown")
+        mask = device_infos.type == "unknown"
         if requester is not None and not np.all(mask):
             requester.stderr.write(
                 "Failed: setting '"
@@ -434,7 +472,7 @@ class SettingsManager:
 
     def mask_walt_net_devices(self, requester, device_infos, setting_name):
         mask_in_walt_net = device_infos.in_walt_net.astype(bool)
-        mask_server = (device_infos.type == 'server')
+        mask_server = device_infos.type == "server"
         mask_ok = mask_in_walt_net & (~mask_server)
         if requester is not None and not np.all(mask_ok):
             reasons = []
@@ -458,7 +496,7 @@ class SettingsManager:
         return mask_ok
 
     def mask_switches(self, requester, device_infos, setting_name):
-        mask = (device_infos.type == 'switch')
+        mask = device_infos.type == "switch"
         if requester is not None and not np.all(mask):
             not_switches = device_infos.name[~mask]
             msg = format_sentence(
@@ -473,7 +511,7 @@ class SettingsManager:
         return mask
 
     def mask_nodes(self, requester, device_infos, setting_name):
-        mask = (device_infos.type == 'node')
+        mask = device_infos.type == "node"
         if requester is not None and not np.all(mask):
             not_nodes = device_infos.name[~mask]
             msg = format_sentence(
@@ -490,7 +528,7 @@ class SettingsManager:
         return mask
 
     def mask_virtual_nodes(self, requester, device_infos, setting_name):
-        mask_nodes = (device_infos.type == 'node')
+        mask_nodes = device_infos.type == "node"
         mask_virtual = device_infos.virtual.astype(bool)
         mask_ok = mask_nodes & mask_virtual
         if requester is not None and not np.all(mask_ok):
@@ -533,7 +571,8 @@ class SettingsManager:
         vnodes_mask = device_infos.virtual.astype(bool) & (device_infos.type == "node")
         for device_info in device_infos[vnodes_mask]:
             self.server.nodes.vnode_update_vm_setting(
-                   device_info.mac, setting_name, setting_value)
+                device_info.mac, setting_name, setting_value
+            )
 
     def set_device_config(self, requester, device_set, settings_args):
         # parse settings
@@ -564,7 +603,7 @@ class SettingsManager:
                 # converting_to_switches means we also have a type=switch setting in the
                 # command line. thus we are actually expecting unknown devices, but this
                 # will be verified by the category check of the "type[=switch]" setting.
-                mask_function = self.mask_all   # ok for us
+                mask_function = self.mask_all  # ok for us
             else:
                 mask_function = self.category_info[category]["mask"]
             mask = mask_function(requester, device_infos, setting_name)
@@ -662,8 +701,7 @@ class SettingsManager:
                 del db_settings["type"]
             elif setting_name == "expose":
                 for device_info in device_infos:
-                    self.server.expose.apply(
-                            requester, device_info.ip, setting_value)
+                    self.server.expose.apply(requester, device_info.ip, setting_value)
 
         # save in db
         new_vals = json.dumps(db_settings)
@@ -695,7 +733,7 @@ class SettingsManager:
         # ensure the device set is correct
         device_infos = self.server.devices.parse_device_set(requester, device_set)
         if device_infos is None:
-            return  # issue already reported
+            return None  # issue already reported
         return self.get_device_config_data_for_devices(device_infos)
 
     def get_device_config_data_for_devices(self, device_infos):
@@ -779,7 +817,8 @@ class PortSettingsManager:
                where mac2=%s
                  and port2 is not null
                  and d1.mac = mac1""",
-            (switch_mac, switch_mac))
+            (switch_mac, switch_mac),
+        )
 
     def _get_poeoff_ports(self, switch_mac):
         return self.server.db.select("poeoff", mac=switch_mac)
@@ -795,9 +834,11 @@ class PortSettingsManager:
             requester.stderr.write(f"Failed: {switch_name} is not a switch.\n")
             return None
         if not device_info.conf.get("lldp.explore", False):
-            requester.stderr.write(f"Failed: cannot detect switch ports of {switch_name} "
-                                   "because \"lldp.explore\" config option is not enabled.\n"
-                                   "See: walt help show device-config\n")
+            requester.stderr.write(
+                f"Failed: cannot detect switch ports of {switch_name} "
+                'because "lldp.explore" config option is not enabled.\n'
+                "See: walt help show device-config\n"
+            )
             return None
         return device_info
 
@@ -821,17 +862,21 @@ class PortSettingsManager:
         # check name
         port_name_is_port_id = False
         if not re.match("^[a-zA-Z0-9-]+$", port_name):
-            requester.stderr.write("Failed: the port name can only be made of digits, "
-                                   "letters, and dashes (minus signs).\n")
+            requester.stderr.write(
+                "Failed: the port name can only be made of digits, "
+                "letters, and dashes (minus signs).\n"
+            )
             return False
         if re.match("^[0-9]+$", port_name):
             port_num = int(port_name)
             if port_num == port_id:
                 port_name_is_port_id = True
             else:
-                requester.stderr.write("Failed: to avoid confusion, the only "
+                requester.stderr.write(
+                    "Failed: to avoid confusion, the only "
                     f"""integer allowed for this port name is "{port_id}", """
-                    "the ID of the port in the switch.\n")
+                    "the ID of the port in the switch.\n"
+                )
                 return False
         # check switch device
         device_info = self._get_switch_info(requester, switch_name)
@@ -843,18 +888,21 @@ class PortSettingsManager:
             # table switchports only list names which are not the default
             self.server.db.delete("switchports", mac=switch_mac, port=port_id)
         else:
-            curr_record = self.server.db.select_unique("switchports",
-                    mac=switch_mac, port=port_id)
+            curr_record = self.server.db.select_unique(
+                "switchports", mac=switch_mac, port=port_id
+            )
             if curr_record is None:
-                self.server.db.insert("switchports",
-                        mac=switch_mac, port=port_id, name=port_name)
+                self.server.db.insert(
+                    "switchports", mac=switch_mac, port=port_id, name=port_name
+                )
             else:
                 self.server.db.execute(
-                        "UPDATE switchports "
-                        "SET name = %s "
-                        "WHERE mac = %s "
-                        "  AND port = %s",
-                        (port_name, switch_mac, port_id))
+                    "UPDATE switchports "
+                    "SET name = %s "
+                    "WHERE mac = %s "
+                    "  AND port = %s",
+                    (port_name, switch_mac, port_id),
+                )
         requester.stdout.write("Done.\n")
 
     def get_config(self, requester, switch_name, port_id):
@@ -865,30 +913,39 @@ class PortSettingsManager:
         switch_mac = device_info.mac
         ports_info = defaultdict(dict)
         for topo in self._get_topology_ports(switch_mac):
-            ports_info[topo.port]['peer'] = topo.peer
+            ports_info[topo.port]["peer"] = topo.peer
         for poeoff in self._get_poeoff_ports(switch_mac):
-            ports_info[poeoff.port]['poeoff'] = poeoff.reason
+            ports_info[poeoff.port]["poeoff"] = poeoff.reason
         for swport in self._get_named_ports(switch_mac):
-            ports_info[swport.port]['name'] = swport.name
+            ports_info[swport.port]["name"] = swport.name
         if port_id is None:
             port_ids = sorted(ports_info.keys())
             if len(port_ids) == 0:
-                requester.stdout.write("WalT did not detect traffic going through this switch yet.\n")
+                requester.stdout.write(
+                    "WalT did not detect traffic going through this switch yet.\n"
+                )
                 requester.stdout.write("Use 'walt device rescan' to probe again.\n")
-                return
-            requester.stdout.write(f"WalT currently uses the following ports of {switch_name}:\n")
-            footer_notes.append("The other switch ports are in their default configuration.")
+                return None
+            requester.stdout.write(
+                f"WalT currently uses the following ports of {switch_name}:\n"
+            )
+            footer_notes.append(
+                "The other switch ports are in their default configuration."
+            )
         else:
-            requester.stdout.write(f"Port {port_id} of {switch_name} has the following config:\n")
+            requester.stdout.write(
+                f"Port {port_id} of {switch_name} has the following config:\n"
+            )
             port_ids = [port_id]
         if device_info.conf.get("poe.reboots", False):
             poe_default = "on"
         else:
             poe_default = "unavailable"
             footer_notes.append(
-                "PoE status is unavailable because the switch has its \"poe.reboots\" "
+                'PoE status is unavailable because the switch has its "poe.reboots" '
                 "config option disabled "
-                "(see: walt help show device-config).")
+                "(see: walt help show device-config)."
+            )
         for port_id in port_ids:
             notes = []
             peer = ports_info[port_id].get("peer", "unknown")
@@ -903,7 +960,7 @@ class PortSettingsManager:
             if len(notes) > 0:
                 notes = "; ".join(notes)
                 status += f"  # {notes}"
-            requester.stdout.write(status + '\n')
+            requester.stdout.write(status + "\n")
         if len(footer_notes) > 0:
-            footer_notes = '\n'.join(footer_notes)
-            requester.stdout.write(footer_notes + '\n')
+            footer_notes = "\n".join(footer_notes)
+            requester.stdout.write(footer_notes + "\n")

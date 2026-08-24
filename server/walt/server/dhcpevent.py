@@ -2,8 +2,9 @@
 import sys
 
 
-def dhcp_commit_event(vci, uci, ip, mac, client_name,
-                      mac_is_known, dev_type, force_name=False):
+def dhcp_commit_event(
+    vci, uci, ip, mac, client_name, mac_is_known, dev_type, force_name=False
+):
     mac_is_known = int(mac_is_known)
     # we want to:
     # 1. detect new devices (i.e. new mac addresses)

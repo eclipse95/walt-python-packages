@@ -11,6 +11,7 @@ class ServerHubProcess(EvProcess):
         from walt.common.constants import WALT_SERVER_DAEMON_PORT
         from walt.common.tcp import TCPServer
         from walt.server.processes.hub.client import APISessionManager
+
         self.tcp_server = TCPServer(WALT_SERVER_DAEMON_PORT)
         self.tcp_server.register_listener_class(
             req_id=APISessionManager.REQ_ID, cls=APISessionManager, process=self

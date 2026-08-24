@@ -1,4 +1,3 @@
-import socket
 import sys
 
 from walt.client.plugins import get_hook
@@ -23,7 +22,7 @@ def wrap_client_command(f):
                     sys.exit(0)
                 else:
                     raise e
-        except socket.error:
+        except OSError:
             hook = get_hook("failing_server_socket")
             if hook is not None:
                 hook()

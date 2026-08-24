@@ -38,10 +38,10 @@ def expect(cond, timeout=5):
         r, w, e = select.select([fd_slave], [], [], deadline - now)
         if len(r) == 0:
             print()
-            ts_print(f"buf value is:\n{repr(buf)}\n")
+            ts_print(f"buf value is:\n{buf!r}\n")
             raise Exception("Reached a timeout!")
         chunk = os.read(fd_slave, 256)
-        ts_print(f"got {repr(chunk)}")
+        ts_print(f"got {chunk!r}")
         buf += chunk
         # ignore bell chars
         buf = re.sub(b"\x07", b"", buf)
@@ -72,7 +72,7 @@ def flush_read():
 
 def send(chars):
     os.write(fd_slave, chars)
-    ts_print(f"sent {repr(chars)}")
+    ts_print(f"sent {chars!r}")
 
 
 def expect_and_pass_prompt():
@@ -130,5 +130,5 @@ for line in instructions.splitlines():
     cmd = cmd.encode("ascii")
     expected = expected.encode("ascii")
     num_tabs = {"test_tab_complete": 1, "test_tabtab_complete": 2}[inst]
-    print(f"** Auto-completion of {repr(cmd)}...")
+    print(f"** Auto-completion of {cmd!r}...")
     test_complete(cmd, expected, num_tabs)

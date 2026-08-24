@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 from plumbum.cmd import chroot
+
 from walt.common.config import load_conf
 from walt.common.tools import failsafe_makedirs
 from walt.server.tools import update_template
@@ -63,9 +64,11 @@ def update_templates(image_path, image_spec, template_env, img_print=print):
     for template_file in image_spec.get("templates", []):
         template_path = image_path + template_file
         if not Path(template_path).exists():
-            img_print(f"WARNING: Template file '{template_file}' "
-                       "defined in /etc/walt/image.spec but not found.",
-                      file=sys.stderr)
+            img_print(
+                f"WARNING: Template file '{template_file}' "
+                "defined in /etc/walt/image.spec but not found.",
+                file=sys.stderr,
+            )
             continue
         update_template(template_path, template_env)
 

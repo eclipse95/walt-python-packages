@@ -1,7 +1,8 @@
 import os
-import requests
 import sys
 from pathlib import Path
+
+import requests
 from walt.client import api
 
 TEST_IMAGE_URL = "hub:eduble/pc-x86-64-test-suite"
@@ -80,8 +81,7 @@ def get_first_items(item_set, n_items, item_label):
         skip_test(f"requires at least two {item_label}s")
     if n_items == 1:
         return result[0]
-    else:
-        return tuple(result)
+    return tuple(result)
 
 
 def test_json_request(items_word, status_code=200, dict_params=None, **params):
@@ -99,5 +99,3 @@ def test_json_request(items_word, status_code=200, dict_params=None, **params):
         items_list = json_resp.get(items_word, [])
         assert num_items == len(items_list)
         return items_list
-
-

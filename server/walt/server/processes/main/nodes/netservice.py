@@ -1,7 +1,7 @@
 from collections import defaultdict
 
-from walt.server.tools import NonBlockingSocket
 from walt.server.const import WALT_NODE_NET_SERVICE_PORT
+from walt.server.tools import NonBlockingSocket
 
 NODE_REQUEST_DELAY_SECS = 15.0
 
@@ -12,9 +12,13 @@ class ServerToNodeRequest(NonBlockingSocket):
         self.req = req
         self.cb = cb
         self.env = env
-        NonBlockingSocket.__init__(self, ev_loop,
-                    self.node.ip, WALT_NODE_NET_SERVICE_PORT,
-                    NODE_REQUEST_DELAY_SECS)
+        NonBlockingSocket.__init__(
+            self,
+            ev_loop,
+            self.node.ip,
+            WALT_NODE_NET_SERVICE_PORT,
+            NODE_REQUEST_DELAY_SECS,
+        )
 
     def run(self):
         self.start_connect()
@@ -40,7 +44,7 @@ class ServerToNodeRequest(NonBlockingSocket):
         self.cb(self.env, self.node, "Timed out waiting for reply")
 
     def on_read_ready(self):
-        resp = b''
+        resp = b""
         while True:
             try:
                 c = self.recv(1)
@@ -50,13 +54,12 @@ class ServerToNodeRequest(NonBlockingSocket):
                 self.cb(self.env, self.node, result_msg)
                 # ev_loop will call close()
                 return False
-            if c == b'\n':
+            if c == b"\n":
                 break
-            elif c == b'':
+            if c == b"":
                 break
             resp += c
-        resp = tuple(part.strip() for part in
-                     resp.decode('ascii').split(" ", 1))
+        resp = tuple(part.strip() for part in resp.decode("ascii").split(" ", 1))
         if resp[0] == "OK":
             self.cb(self.env, self.node, "OK")
         elif len(resp) == 2:

@@ -1,5 +1,7 @@
 import sys
+
 from walt.common.version import __version__
+
 
 class WalTUpdatedException(Exception):
     pass
@@ -23,6 +25,7 @@ def check_update(server):
         import subprocess
         import tempfile
         from pathlib import Path
+
         pip_install = f"{sys.prefix}/bin/pip install"
         subprocess.run(f"{pip_install} --upgrade pip".split(), check=True)
         with tempfile.TemporaryDirectory() as tmpdirname:
@@ -34,7 +37,7 @@ def check_update(server):
                 update_cmd += f" {whl_file}"
             subprocess.run(update_cmd.split(), check=True)
         print()
-        if Path(sys.argv[0]).name == 'walt':
+        if Path(sys.argv[0]).name == "walt":
             # walt cli, restart the whole process
             os.execv(sys.argv[0], sys.argv)
         else:
@@ -44,6 +47,6 @@ def check_update(server):
             # Let's just reload walt modules and raise an exception.
             mod_info = dict(sys.modules.items())  # copy
             for modname, mod in mod_info.items():
-                if modname.startswith('walt.'):
+                if modname.startswith("walt."):
                     importlib.reload(mod)
             raise WalTUpdatedException

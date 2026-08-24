@@ -85,7 +85,7 @@ def validate_image_name(requester, image_name):
     return False
 
 
-class NodeImage(object):
+class NodeImage:
     def __init__(self, store: NodeImageStore, fullname):
         self.store = store
         self.db = store.db

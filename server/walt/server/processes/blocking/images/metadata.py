@@ -88,9 +88,9 @@ def update_user_metadata_for_image(requester, hub, image_fullname, labels):
 def update_hub_metadata(requester, user):
     hub = DockerHubClient()
     try:
-        requester.ensure_registry_conf_has_credentials('hub')
+        requester.ensure_registry_conf_has_credentials("hub")
     except MissingRegistryCredentials as e:
-        return ('MISSING_REGISTRY_CREDENTIALS', e.registry_label)
+        return ("MISSING_REGISTRY_CREDENTIALS", e.registry_label)
     # login right away (we could pull anonymously, but with a low
     # pull rate limit, and anyway at the end we will have to push)
     hub.login(requester)
@@ -98,6 +98,5 @@ def update_hub_metadata(requester, user):
     metadata = collect_user_metadata(hub, user)
     # push back on docker hub
     if push_user_metadata(requester, hub, user, metadata):
-        return ('OK',)
-    else:
-        return ('FAILED',)
+        return ("OK",)
+    return ("FAILED",)

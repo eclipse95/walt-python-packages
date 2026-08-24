@@ -45,7 +45,7 @@ class VLANCapableBridge(Variant):
             vlan = int(vlan)
             mac = decode_mac_address(mac)
             port = int(v)
-            status = forwarding_db_status.get(k, None)
+            status = forwarding_db_status.get(k)
             if status is None:
                 continue
             if enum_label(status) == "learned":

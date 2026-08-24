@@ -1,5 +1,4 @@
 import os
-import socket
 
 
 # This function allows to disable buffering
@@ -30,5 +29,5 @@ def read_and_copy(in_reader, out):
             return False  # close
         out.write(buf)
         out.flush()
-    except socket.error:
+    except OSError:
         return False  # close

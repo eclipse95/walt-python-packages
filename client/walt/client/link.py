@@ -13,7 +13,7 @@ from walt.common.tcp import client_sock_file
 
 
 @api
-class ExposedStream(object):
+class ExposedStream:
     def __init__(self, stream):
         self.stream = stream
 
@@ -37,8 +37,7 @@ class ExposedStream(object):
     def get_encoding(self):
         if hasattr(self.stream, "encoding"):
             return self.stream.encoding
-        else:
-            return None
+        return None
 
     @api_expose_method
     def isatty(self):
@@ -67,6 +66,7 @@ class WaltClientService(BaseAPIService):
     @api_expose_method
     def get_win_size(self):
         from walt.common.term import TTYSettings
+
         tty = TTYSettings()
         return {"cols": tty.cols, "rows": tty.rows}
 
@@ -95,19 +95,18 @@ class WaltClientService(BaseAPIService):
         reg_conf = getattr(conf.registries, registry_label)
         if reg_conf.hasattr("username") and reg_conf.hasattr("password"):
             from walt.client.auth import get_encrypted_credentials
+
             return get_encrypted_credentials(
                 server_pub_key, reg_conf.username, reg_conf.password
             )
-        else:
-            return None
+        return None
 
     @api_expose_method
     def get_registry_username(self, registry_label):
         reg_conf = getattr(conf.registries, registry_label)
         if reg_conf.hasattr("username"):
             return reg_conf.username
-        else:
-            return None
+        return None
 
     @api_expose_method
     def prompt_missing_registry_credentials(self, registry_label):

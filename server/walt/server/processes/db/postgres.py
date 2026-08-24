@@ -1,11 +1,12 @@
-import numpy as np
 import shlex
 import uuid
 from subprocess import PIPE, Popen
 from sys import stderr
 
+import numpy as np
 import psycopg2
 from psycopg2.extras import NamedTupleCursor
+
 from walt.common.formatting import columnate
 from walt.server.const import WALT_DBNAME, WALT_DBUSER
 
@@ -58,8 +59,8 @@ class PostgresDB:
         try:
             self.c.execute(query, query_args)
         except Exception:
-            print(f"Exception when running this query: {repr(query)}")
-            print(f"  -- args: {repr(query_args)}")
+            print(f"Exception when running this query: {query!r}")
+            print(f"  -- args: {query_args!r}")
             raise
         if self.c.description is None:  # it was not a select query
             return None
@@ -70,7 +71,7 @@ class PostgresDB:
         # Unfortunately it seems named cursor do not have the description
         # attribute available (until we fetch the first row), so we have
         # this little trick to obtain it.
-        self.c.execute(sql.rstrip().rstrip(';') + " LIMIT 0", args)
+        self.c.execute(sql.rstrip().rstrip(";") + " LIMIT 0", args)
         dt = np.dtype([(col.name, object) for col in self.c.description])
         self.c.fetchall()
         # ok create the real cursor
@@ -125,8 +126,7 @@ class PostgresDB:
     def get_where_clause_from_constraints(self, constraints):
         if len(constraints) > 0:
             return "WHERE %s" % " AND ".join(constraints)
-        else:
-            return ""
+        return ""
 
     # format a where clause with ANDs on the specified columns
     def get_where_clause_pattern(self, cols):
@@ -192,8 +192,7 @@ class PostgresDB:
                 values,
             )
             return self.c.rowcount  # number of rows updated
-        else:
-            return 0
+        return 0
 
     # caution when calling select_no_fetch() not to let the
     # returned cursor leave db process
@@ -216,8 +215,7 @@ class PostgresDB:
         recordset = self.select(table, **kwargs)
         if len(recordset) == 0:
             return None
-        else:
-            return recordset[0]
+        return recordset[0]
 
     def pretty_printed_table(self, table):
         return self.pretty_printed_select("select * from %s;" % table)

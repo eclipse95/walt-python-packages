@@ -9,10 +9,10 @@ from walt.server import conf
 from walt.server.exttools import docker
 from walt.server.processes.blocking.images.metadata import async_pull_user_metadata
 from walt.server.processes.blocking.registries import (
-    DockerHubClient,
     DockerDaemonClient,
-    get_registry_client,
+    DockerHubClient,
     MissingRegistryCredentials,
+    get_registry_client,
 )
 from walt.server.tools import async_merge_generators, format_node_models_list
 
@@ -39,7 +39,7 @@ def location_long_label(location):
 # is published with "walt image publish".
 
 
-class Search(object):
+class Search:
     def __init__(self, image_store, requester, validate=None, output_registries=False):
         self.image_store = image_store
         self.requester = requester
@@ -79,8 +79,7 @@ class Search(object):
             # First-time logins will require the user to input its credentials,
             # so fail early if they are missing
             if registry.op_needs_authentication("search"):
-                self.requester.ensure_registry_conf_has_credentials(
-                                    registry.label)
+                self.requester.ensure_registry_conf_has_credentials(registry.label)
         async for record in async_merge_generators(*generators):
             yield record
 
@@ -91,7 +90,8 @@ class Search(object):
                 if self.output_registries:
                     raise NotImplementedError(
                         "Local walt image repo does not "
-                        "implement the same registry API.")
+                        "implement the same registry API."
+                    )
                 else:
                     yield (fullname, "walt", labels)
 
@@ -169,16 +169,17 @@ class Search(object):
 def short_image_name(image_name):
     if image_name.endswith(":latest"):
         return image_name[:-7]
-    else:
-        return image_name
+    return image_name
 
 
 def clonable_link(location, user, image_name, min_version=None):
-    v = __version__.split('+')[0]
+    v = __version__.split("+")[0]
     try:
-        if (min_version is not None and
-            float(v) >= 1.0 and   # bypass the check if dev version
-            float(min_version) > float(v)):
+        if (
+            min_version is not None
+            and float(v) >= 1.0  # bypass the check if dev version
+            and float(min_version) > float(v)
+        ):
             return f"[Need server upgrade, version>={min_version}]"
     except Exception:
         print("Ignoring invalid image label 'walt.server.minversion'")
@@ -231,7 +232,7 @@ async def async_format_result(it):
 async def async_perform_search(image_store, requester, keyword, tty_mode):
     username = requester.get_username()
     if not username:
-        return None  # client already disconnected, give up
+        return  # client already disconnected, give up
     if keyword:
 
         def validate(image_name, user, location):
@@ -265,12 +266,12 @@ def search(requester, server: Server, keyword, tty_mode):
     try:
         # login to the docker hub (we can pull anonymously,
         # but with a low pull rate limit)
-        requester.ensure_registry_conf_has_credentials('hub')
+        requester.ensure_registry_conf_has_credentials("hub")
         hub.login(requester)
         # perform all the pulls asynchronously
         asyncio.run(
             async_perform_search(server.images.store, requester, keyword, tty_mode)
         )
     except MissingRegistryCredentials as e:
-        return ('MISSING_REGISTRY_CREDENTIALS', e.registry_label)
-    return ('OK',)
+        return ("MISSING_REGISTRY_CREDENTIALS", e.registry_label)
+    return ("OK",)

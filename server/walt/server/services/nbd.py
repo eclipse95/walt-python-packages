@@ -5,9 +5,8 @@ import socket
 from tempfile import TemporaryFile
 
 from walt.common.evloop import EventLoop
-from walt.common.tcp import set_sock_reuseaddr, set_tcp_nodelay, set_tcp_keepalive
-from walt.server.tools import NetworkMsg, NetworkBuf
-
+from walt.common.tcp import set_sock_reuseaddr, set_tcp_keepalive, set_tcp_nodelay
+from walt.server.tools import NetworkBuf, NetworkMsg
 
 # This is a minimal NBD (network block device) server implementation
 # allowing to provide memory swap space for WALT nodes over the network.
@@ -39,11 +38,11 @@ NBD_FLAG_FIXED_NEWSTYLE = 0x1
 NBD_FLAG_C_FIXED_NEWSTYLE = 0x1
 NBD_FLAG_NO_ZEROES = 0x2
 NBD_FLAG_C_NO_ZEROES = 0x2
-NBD_OPT_RESP_MAGIC = 0x3e889045565a9
+NBD_OPT_RESP_MAGIC = 0x3E889045565A9
 NBD_REQUEST_MAGIC = 0x25609513
 NBD_SIMPLE_REPLY_MAGIC = 0x67446698
 NBD_OPT_GO = 7
-MIN_BLOCK_SIZE, PREF_BLOCK_SIZE, MAX_BLOCK_SIZE = (1, 4096, 1024*1024)
+MIN_BLOCK_SIZE, PREF_BLOCK_SIZE, MAX_BLOCK_SIZE = (1, 4096, 1024 * 1024)
 NBD_REP_ACK = 1
 NBD_REP_INFO = 3
 NBD_INFO_EXPORT = 0
@@ -52,37 +51,40 @@ NBD_CMD_READ = 0
 NBD_CMD_WRITE = 1
 NBD_CMD_DISC = 2
 
-SERVER_HANDSHAKE = NetworkMsg('!8s8sH',
-                              b'NBDMAGIC', b'IHAVEOPT',
-                              NBD_FLAG_FIXED_NEWSTYLE | NBD_FLAG_NO_ZEROES)
-CLIENT_FLAGS = NetworkMsg('!I')
-NBD_OPT_HEADER = NetworkMsg('!8sII')
-NBD_OPT_RESP_HEADER = NetworkMsg('!QIII', NBD_OPT_RESP_MAGIC)
-NBD_INFO_BLOCK_SIZE_MSG = NetworkMsg('!HIII', NBD_INFO_BLOCK_SIZE)
-NBD_INFO_EXPORT_MSG = NetworkMsg('!HQH', NBD_INFO_EXPORT)
-NBD_REQ_HEADER = NetworkMsg('!IHH8sQI')
-NBD_SIMPLE_REPLY_HEADER = NetworkMsg('!II8s', NBD_SIMPLE_REPLY_MAGIC)
+SERVER_HANDSHAKE = NetworkMsg(
+    "!8s8sH", b"NBDMAGIC", b"IHAVEOPT", NBD_FLAG_FIXED_NEWSTYLE | NBD_FLAG_NO_ZEROES
+)
+CLIENT_FLAGS = NetworkMsg("!I")
+NBD_OPT_HEADER = NetworkMsg("!8sII")
+NBD_OPT_RESP_HEADER = NetworkMsg("!QIII", NBD_OPT_RESP_MAGIC)
+NBD_INFO_BLOCK_SIZE_MSG = NetworkMsg("!HIII", NBD_INFO_BLOCK_SIZE)
+NBD_INFO_EXPORT_MSG = NetworkMsg("!HQH", NBD_INFO_EXPORT)
+NBD_REQ_HEADER = NetworkMsg("!IHH8sQI")
+NBD_SIMPLE_REPLY_HEADER = NetworkMsg("!II8s", NBD_SIMPLE_REPLY_MAGIC)
 
 
 def handle_opt_go(netbuf):
-    name_len = NetworkMsg('!I').read(netbuf)
+    name_len = NetworkMsg("!I").read(netbuf)
     export_name = netbuf.read(name_len)
-    digits = re.sub(b'^swap-([0-9]+)G$', b'\\1', b'swap-16G')
+    digits = re.sub(b"^swap-([0-9]+)G$", b"\\1", b"swap-16G")
     export_size = int(digits) * 1024 * 1024 * 1024
-    num_info_reqs = NetworkMsg('!H').read(netbuf)
+    num_info_reqs = NetworkMsg("!H").read(netbuf)
     # ignore info reqs
     if num_info_reqs > 0:
-        netbuf.read(2*num_info_reqs)
+        netbuf.read(2 * num_info_reqs)
     # send NBD_OPT_GO response with block size info type
     info_block_size_msg = NBD_INFO_BLOCK_SIZE_MSG.format(
-            MIN_BLOCK_SIZE, PREF_BLOCK_SIZE, MAX_BLOCK_SIZE)
+        MIN_BLOCK_SIZE, PREF_BLOCK_SIZE, MAX_BLOCK_SIZE
+    )
     resp_header = NBD_OPT_RESP_HEADER.format(
-            NBD_OPT_GO, NBD_REP_INFO, len(info_block_size_msg))
+        NBD_OPT_GO, NBD_REP_INFO, len(info_block_size_msg)
+    )
     netbuf.write(resp_header + info_block_size_msg)
     # send NBD_OPT_GO response with export info type
     info_export_msg = NBD_INFO_EXPORT_MSG.format(export_size, 0)
     resp_header = NBD_OPT_RESP_HEADER.format(
-            NBD_OPT_GO, NBD_REP_INFO, len(info_export_msg))
+        NBD_OPT_GO, NBD_REP_INFO, len(info_export_msg)
+    )
     netbuf.write(resp_header + info_export_msg)
     # send NBD_OPT_GO response ACK
     NBD_OPT_RESP_HEADER.write(netbuf, NBD_OPT_GO, NBD_REP_ACK, 0)
@@ -91,7 +93,7 @@ def handle_opt_go(netbuf):
 
 def handle_request(netbuf, swap_file):
     magic, flags, req_type, cookie, offset, length = NBD_REQ_HEADER.read(netbuf)
-    assert(magic == NBD_REQUEST_MAGIC)
+    assert magic == NBD_REQUEST_MAGIC
     if req_type == NBD_CMD_READ:
         NBD_SIMPLE_REPLY_HEADER.write(netbuf, 0, cookie)
         netbuf.sendfile(swap_file, offset, length)
@@ -112,12 +114,11 @@ def get_server_sockets():
         fd_range = range(SYSTEMD_FIRST_FD, SYSTEMD_FIRST_FD + num)
         # systemd already did bind() and listen()
         return [socket.socket(fileno=fd) for fd in fd_range]
-    else:
-        serv_s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        set_sock_reuseaddr(serv_s)
-        serv_s.bind(("", NBD_PORT))
-        serv_s.listen(LISTEN_BACKLOG)
-        return [serv_s]
+    serv_s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    set_sock_reuseaddr(serv_s)
+    serv_s.bind(("", NBD_PORT))
+    serv_s.listen(LISTEN_BACKLOG)
+    return [serv_s]
 
 
 class ServerSocketListener:
@@ -167,11 +168,11 @@ class CommSocketListener:
             while True:
                 if self._step == COMM_STATE.WAIT_CLIENT_FLAGS:
                     client_flags = CLIENT_FLAGS.read(self._netbuf)
-                    assert(client_flags & NBD_FLAG_C_FIXED_NEWSTYLE > 0)
+                    assert client_flags & NBD_FLAG_C_FIXED_NEWSTYLE > 0
                     self._step = COMM_STATE.WAIT_CLIENT_OPT
                 elif self._step == COMM_STATE.WAIT_CLIENT_OPT:
                     magic, opt_type, opt_datalen = NBD_OPT_HEADER.read(self._netbuf)
-                    assert(opt_type == NBD_OPT_GO)
+                    assert opt_type == NBD_OPT_GO
                     export_size = handle_opt_go(self._netbuf)
                     self._swap_file = TemporaryFile(buffering=0)
                     self._swap_file.truncate(export_size)

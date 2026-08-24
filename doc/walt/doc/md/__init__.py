@@ -1,20 +1,23 @@
 import re
 import sys
-
 from importlib.resources import files
+
 from walt.doc.pager import DocPager
 
 
 def get_md_content(topic, err_out=False):
     try:
         import walt.doc.md
+
         path = files(walt.doc.md) / (topic + ".md")
         return path.read_text()
     except Exception:
         if err_out:
-            print('Sorry, no such help topic. (tip: use "walt help list")',
-                  file=sys.stderr)
-        return
+            print(
+                'Sorry, no such help topic. (tip: use "walt help list")',
+                file=sys.stderr,
+            )
+        return None
 
 
 def display_doc(topic):
@@ -29,6 +32,7 @@ def display_doc(topic):
 
 def get_topics():
     import walt.doc.md
+
     file_iter = files(walt.doc.md).iterdir()
     return (f.name[:-3] for f in file_iter if f.name.endswith(".md"))
 
@@ -47,7 +51,7 @@ def iter_topic_header():
 
 def get_described_topics():
     topic_dict = {topic: header for topic, header in iter_topic_header()}
-    max_topic_len = max(len(topic) for topic in topic_dict.keys())
+    max_topic_len = max(len(topic) for topic in topic_dict)
     for topic, header in topic_dict.items():
         yield f"{topic:<{max_topic_len}} -- {header}"
 

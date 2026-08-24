@@ -2,9 +2,14 @@ import json
 from pathlib import Path
 
 from podman.errors.exceptions import ImageNotFound
+
 from walt.server.exttools import podman
-from walt.server.tools import add_image_repo, format_node_models_list
-from walt.server.tools import parse_date, get_podman_client
+from walt.server.tools import (
+    add_image_repo,
+    format_node_models_list,
+    get_podman_client,
+    parse_date,
+)
 
 MAX_IMAGE_LAYERS = 128
 METADATA_CACHE_FILE = Path("/var/cache/walt/images.metadata")
@@ -45,8 +50,7 @@ class WalTLocalRegistry:
     def add_repo(self, fullname):
         if fullname.startswith("walt/"):
             return "localhost/" + fullname
-        else:
-            return "docker.io/" + fullname
+        return "docker.io/" + fullname
 
     def ll_podman_tag(self, old_fullname_or_id, repo_fullname):
         new_args = repo_fullname.split(":")  # split image_repo_name and image_tag
@@ -89,7 +93,7 @@ class WalTLocalRegistry:
             num_layers = 0
         else:
             num_layers = len(layers)
-        size_kib = data.attrs['Size'] // 1024
+        size_kib = data.attrs["Size"] // 1024
         dt = parse_date(created_ts)
         return dict(
             labels=labels,
@@ -100,14 +104,14 @@ class WalTLocalRegistry:
             node_models=node_models,
             node_models_desc=node_models_desc,
             size_kib=size_kib,
-            digest=data.attrs["Digest"]
+            digest=data.attrs["Digest"],
         )
 
     def image_exists(self, fullname):
         if fullname in self.names_cache:
             return True
-        else:  # slow path
-            return self.get_podman_image(fullname) is not None
+        # slow path
+        return self.get_podman_image(fullname) is not None
 
     def get_podman_image(self, fullname):
         try:

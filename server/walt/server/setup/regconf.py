@@ -6,14 +6,15 @@ from collections import defaultdict
 from copy import deepcopy
 
 from plumbum.cli.terminal import prompt
-from walt.doc.md import display_doc
+
 from walt.common.formatting import columnate, framed, highlight
 from walt.common.term import (
-        alternate_screen_buffer,
-        choose,
-        clear_screen,
-        wait_for_large_enough_terminal,
+    alternate_screen_buffer,
+    choose,
+    clear_screen,
+    wait_for_large_enough_terminal,
 )
+from walt.doc.md import display_doc
 
 EDITOR_TOP_MESSAGE = """\
 Please review and validate or edit the proposed configuration of image registries.
@@ -56,12 +57,9 @@ def pretty_print_regconf(regconf):
                 reg_config = "<not-editable>"
             else:
                 props = ("host", "port", "protocol", "auth")
-                if reg['api'] == 'jfrog-artifactory':
+                if reg["api"] == "jfrog-artifactory":
                     props += ("repository",)
-                reg_config = " ".join(
-                    f"{k}={printed_reg_value(reg, k)}"
-                    for k in props
-                )
+                reg_config = " ".join(f"{k}={printed_reg_value(reg, k)}" for k in props)
             rows.append(
                 (
                     printed_reg_value(reg, "label"),
@@ -94,8 +92,8 @@ def print_regconf_status(context, regconf):
             continue
         api = reg["api"]
         possibly_undefined = {
-                "docker-registry-v2": ("label", "host"),
-                "jfrog-artifactory": ("label", "host", "repository"),
+            "docker-registry-v2": ("label", "host"),
+            "jfrog-artifactory": ("label", "host", "repository"),
         }[api]
         for k in possibly_undefined:
             if k not in reg:
@@ -125,8 +123,10 @@ def print_regconf_status(context, regconf):
         other_registry_api = api_per_host_port.get((host, port))
         if other_registry_api is not None:
             if api != "jfrog-artifactory" or other_registry_api != "jfrog-artifactory":
-                explain = ('Several registries are using the same '
-                           f'location "{host}:{port}".')
+                explain = (
+                    "Several registries are using the same "
+                    f'location "{host}:{port}".'
+                )
                 print(s + highlight("invalid") + "\n" + explain)
                 return False  # invalid
             # we have two JFrog registries at the same (host, port) location.
@@ -134,8 +134,10 @@ def print_regconf_status(context, regconf):
             jfrog_repo = reg["repository"]
             other_jfrog_repos = jfrog_repos_per_host_port[(host, port)]
             if jfrog_repo in other_jfrog_repos:
-                explain = (f'The JFrog repository "{jfrog_repo}" '
-                           f'at location "{host}:{port}" is listed twice.')
+                explain = (
+                    f'The JFrog repository "{jfrog_repo}" '
+                    f'at location "{host}:{port}" is listed twice.'
+                )
                 print(s + highlight("invalid") + "\n" + explain)
                 return False  # invalid
         api_per_host_port[(host, port)] = api
@@ -252,7 +254,7 @@ def edit_reg_menu_info(context, regconf, i, is_new):
         reg_name = '"' + reg["label"] + '"'
     options = {}
     props = ("label", "description", "host", "port", "protocol", "auth")
-    if reg['api'] == 'jfrog-artifactory':
+    if reg["api"] == "jfrog-artifactory":
         props += ("repository",)
     for k in props:
         verb = "change" if k in reg else "define"
@@ -273,8 +275,16 @@ def validate_registry_changes(context, regconf, i):
     # configuration file
     # (note: python dictionaries record the order their entries were inserted)
     reg = regconf[i]
-    for prop in ("label", "api", "description", "host", "port", "protocol", "auth",
-                 "repository"):
+    for prop in (
+        "label",
+        "api",
+        "description",
+        "host",
+        "port",
+        "protocol",
+        "auth",
+        "repository",
+    ):
         if prop in reg:
             reg[prop] = reg.pop(prop)
     # return to main menu
@@ -285,9 +295,11 @@ def define_reg_property(context, regconf, i, k):
     reg = regconf[i]
     value = None
     if k == "label":
-        print("Note: the label you enter will be used to identify this "
-              "registry in walt commands.\n"
-              "So a short label is preferred, e.g. 'local', 'local-jfrog', etc.")
+        print(
+            "Note: the label you enter will be used to identify this "
+            "registry in walt commands.\n"
+            "So a short label is preferred, e.g. 'local', 'local-jfrog', etc."
+        )
     while True:
         try:
             # prompt for value and check it
@@ -350,7 +362,8 @@ def define_reg_property(context, regconf, i, k):
             elif k == "repository":  # jfrog-repository (similar to a team account)
                 value = prompt(
                     "Please indicate the name of the Repository to push/pull to, "
-                    "on this JFrog registry: ", type=str
+                    "on this JFrog registry: ",
+                    type=str,
                 )
                 if len(value) == 0:
                     print("Invalid entry.")
@@ -360,9 +373,8 @@ def define_reg_property(context, regconf, i, k):
                 print("Note: type ctrl-C to abort.")
                 print()
                 continue
-            else:
-                reg[k] = value  # validate the change
-                return
+            reg[k] = value  # validate the change
+            return
         except KeyboardInterrupt:
             print()
             print("Aborted.")

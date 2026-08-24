@@ -1,12 +1,10 @@
-from socket import error as SocketError
-
 from walt.common.apilink import APIChannel, AttrCallAggregator
 from walt.common.tcp import Requests
 from walt.common.version import __version__
 from walt.server.process import RPCService
 
 
-class APISessionManager(object):
+class APISessionManager:
     REQ_ID = Requests.REQ_API_SESSION
     REQUESTER_API_IGNORED = (EOFError,)
     next_session_id = 0
@@ -38,15 +36,14 @@ class APISessionManager(object):
     def handle_event(self, ts):
         if not self.target_api:
             return self.init_session()
-        else:
-            return self.handle_client_message()
+        return self.handle_client_message()
 
     def read_api_channel(self):
         # exceptions may occur if the client disconnects.
         # we should ignore those.
         try:
             return self.api_channel.read()
-        except (EOFError, SyntaxError, OSError, SocketError):
+        except (EOFError, SyntaxError, OSError):
             return None
 
     def handle_client_message(self):
@@ -61,14 +58,14 @@ class APISessionManager(object):
             if cmd == "SET_MODE":
                 self.api_channel.set_mode(event[1])
                 return True
-            elif cmd == "API_CALL":
+            if cmd == "API_CALL":
                 if len(event) != 4:
                     return False
                 attr, args, kwargs = event[1:]
                 print("hub api_call:", self.target_api, attr, args, kwargs)
                 self.record_task(attr, args, kwargs)
                 return True
-            elif cmd == "RESULT":
+            if cmd == "RESULT":
                 if len(event) != 2:
                     return False
                 if len(self.stack_of_client_tasks) == 0:

@@ -21,15 +21,11 @@ TCP_KEEPALIVE_FAILED_COUNT = 5
 
 def set_tcp_keepalive(sock):
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-    sock.setsockopt(socket.IPPROTO_TCP,
-                    socket.TCP_KEEPIDLE,
-                    TCP_KEEPALIVE_IDLE_TIMEOUT)
-    sock.setsockopt(socket.IPPROTO_TCP,
-                    socket.TCP_KEEPINTVL,
-                    TCP_KEEPALIVE_PROBE_INTERVAL)
-    sock.setsockopt(socket.IPPROTO_TCP,
-                    socket.TCP_KEEPCNT,
-                    TCP_KEEPALIVE_FAILED_COUNT)
+    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, TCP_KEEPALIVE_IDLE_TIMEOUT)
+    sock.setsockopt(
+        socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, TCP_KEEPALIVE_PROBE_INTERVAL
+    )
+    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, TCP_KEEPALIVE_FAILED_COUNT)
 
 
 def set_sock_reuseaddr(sock):
@@ -154,7 +150,7 @@ class RWSocketFile:
             return self._s.recv(1)
         # general case
         if self.pickle_mode:
-            #print(f"full-read {size}")
+            # print(f"full-read {size}")
             msg = b""
             if size is None:
                 # read all
@@ -172,13 +168,12 @@ class RWSocketFile:
                     size -= len(chunk)
                     msg += chunk
             return msg
-        else:
-            if size is None:
-                size = -1
-            return self.read1(size)
+        if size is None:
+            size = -1
+        return self.read1(size)
 
     def read1(self, size=-1):
-        #print(f"read1 {size}")
+        # print(f"read1 {size}")
         if size == 0:
             return b""
         if size == -1:
@@ -186,7 +181,7 @@ class RWSocketFile:
         return self._s.recv(size)
 
     def readinto(self, b):
-        #print(f"readinto {len(b)}")
+        # print(f"readinto {len(b)}")
         msg = self.read(len(b))
         b[:] = msg
         return len(b)
@@ -196,7 +191,7 @@ class RWSocketFile:
         return len(msg)
 
     def flush(self):
-        pass    # there is no buffering
+        pass  # there is no buffering
 
     @property
     def closed(self):

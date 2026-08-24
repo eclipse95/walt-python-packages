@@ -143,8 +143,8 @@ def cache_modules_on_faster_disk():
 # -- 4th hack --
 # The following prevents plumbum to load modules we will not need.
 DIVERTLIST = ["plumbum.machines", "plumbum.path", "plumbum.commands", "plumbum.cmd"]
-PROFILE_IMPORTS = ('PROFILE_IMPORTS' in os.environ)
-DEBUG_IMPORTS = ('DEBUG_IMPORTS' in os.environ)
+PROFILE_IMPORTS = "PROFILE_IMPORTS" in os.environ
+DEBUG_IMPORTS = "DEBUG_IMPORTS" in os.environ
 DEBUG_NAMES = []
 
 real_import = None
@@ -157,8 +157,7 @@ class Dummy:
 def __get_dummy_module__(name):
     if name in sys.modules:
         return True, sys.modules[name]
-    else:
-        return False, Dummy()
+    return False, Dummy()
 
 
 def diverted(name):
@@ -175,7 +174,7 @@ def __myimport__(name, globals=None, locals=None, fromlist=(), level=0):
         fromlist = ()
     if name in sys.modules and len(fromlist) == 0:
         # fast path
-        top_level_name = name.split('.', maxsplit=1)[0]
+        top_level_name = name.split(".", maxsplit=1)[0]
         mod = sys.modules[top_level_name]
         if mod is None:
             raise ImportError
@@ -183,7 +182,7 @@ def __myimport__(name, globals=None, locals=None, fromlist=(), level=0):
     import_args = name, globals, locals, fromlist, level
     if DEBUG_IMPORTS:
         DEBUG_NAMES += [name]
-        print(DEBUG_NAMES, end='\r\n')
+        print(DEBUG_NAMES, end="\r\n")
     result = None
     if level > 0:
         caller_mod_path = tuple(sys._current_frames().values())[0].f_back.f_globals[
@@ -194,10 +193,7 @@ def __myimport__(name, globals=None, locals=None, fromlist=(), level=0):
             if diverted(item_path):
                 __myimport__(f"{caller_mod_path}.{item}", globals, locals)
             result = real_import(name, globals, locals, (item,), level)
-    if result is None and (
-        "*" in fromlist
-        or not diverted(name)
-    ):
+    if result is None and ("*" in fromlist or not diverted(name)):
         result = real_import(*import_args)
     # see https://docs.python.org/3/library/functions.html#import__
     if result is None and len(fromlist) > 0:
@@ -237,7 +233,7 @@ def divert_unused_plumbum_modules():
     if PROFILE_IMPORTS:
         from time import time
 
-        min_import_delay_us = os.environ.get('PROFILE_IMPORTS_MIN_DELAY_US', 500)
+        min_import_delay_us = os.environ.get("PROFILE_IMPORTS_MIN_DELAY_US", 500)
         min_import_delay_s = min_import_delay_us / 1000000
 
         def debug_import(*import_args):
@@ -251,7 +247,7 @@ def divert_unused_plumbum_modules():
             res = saved_import(*import_args)
             t1 = time()
             import_children = prev_import_children
-            import_children.append((t1-t0, name, args, children))
+            import_children.append((t1 - t0, name, args, children))
             return res
 
         def treemap_data(parent_name, import_children, found_names):
@@ -260,8 +256,7 @@ def divert_unused_plumbum_modules():
                 delay, name, args, children = import_child
                 if name in found_names:
                     continue
-                else:
-                    found_names.add(name)
+                found_names.add(name)
                 # children_overall_time = sum((c[0] for c in children))
                 # time_outside_children = delay - children_overall_time
                 # data.append((name, parent_name, time_outside_children))
@@ -271,9 +266,8 @@ def divert_unused_plumbum_modules():
 
         def abbrev_name(name):
             if len(name) > 17:
-                return f'{name[0]}..{name[-15:]}'
-            else:
-                return name
+                return f"{name[0]}..{name[-15:]}"
+            return name
 
         def print_debug_imports():
             global real_import
@@ -285,15 +279,18 @@ def divert_unused_plumbum_modules():
             try:
                 import plotly.graph_objects as go
             except Exception:
-                print('Sorry, PROFILE_IMPORTS mode requires more modules:')
-                print('pip install plotly pandas kaleido')
+                print("Sorry, PROFILE_IMPORTS mode requires more modules:")
+                print("pip install plotly pandas kaleido")
                 return
             data = treemap_data("", import_children, set())
-            data = [(f"{abbrev_name(name)} {v*1000:.1f}ms",
-                     name, parent, v)
-                    for name, parent, v in data if v >= min_import_delay_s]
+            data = [
+                (f"{abbrev_name(name)} {v*1000:.1f}ms", name, parent, v)
+                for name, parent, v in data
+                if v >= min_import_delay_s
+            ]
             data = list(zip(*data))
-            fig = go.Figure(go.Treemap(
+            fig = go.Figure(
+                go.Treemap(
                     labels=data[0],
                     ids=data[1],
                     parents=data[2],
@@ -304,7 +301,7 @@ def divert_unused_plumbum_modules():
                 )
             )
             fig.update_traces(
-                    marker_colorscale=['lightgrey']*len(data[0]),
+                marker_colorscale=["lightgrey"] * len(data[0]),
             )
             fig.write_image("imports.pdf")
             print("File imports.pdf successfully generated.")

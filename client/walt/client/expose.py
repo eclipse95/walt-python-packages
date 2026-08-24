@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import sys
-
 from select import select
 
 from walt.client.link import connect_to_tcp_server
@@ -18,8 +17,7 @@ class TCPExposer:
         try:
             self.local_server_s = server_socket(self.local_port)
         except OSError as e:
-            print(f"Could not open TCP port {self.local_port}: {str(e)}",
-                  file=sys.stderr)
+            print(f"Could not open TCP port {self.local_port}: {e!s}", file=sys.stderr)
             return False
         while True:
             read_socks = list(self.associations.keys()) + [self.local_server_s]
@@ -51,10 +49,9 @@ class TCPExposer:
         if status == b"OK":
             print("New connection forwarded to node.")
             return sock_file
-        else:
-            sock_file.close()
-            print(status.decode("utf-8"))
-            return None
+        sock_file.close()
+        print(status.decode("utf-8"))
+        return None
 
     def event_on_server_s(self):
         conn_s, addr = self.local_server_s.accept()

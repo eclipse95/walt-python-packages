@@ -1,21 +1,25 @@
-import numpy as np
 import pickle
 import shutil
 import tarfile
+from importlib.resources import files
 from pathlib import Path
 
-from importlib.resources import files
+import numpy as np
+
 from walt.common.tools import failsafe_makedirs, failsafe_symlink
-from walt.server.tools import get_server_ip, get_walt_subnet
-from walt.server.tools import get_rpi_foundation_mac_vendor_ids
+from walt.server.tools import (
+    get_rpi_foundation_mac_vendor_ids,
+    get_server_ip,
+    get_walt_subnet,
+)
 
 TFTP_ROOT = "/var/lib/walt/"
 PXE_PATH = TFTP_ROOT + "pxe/"
 NODES_PATH = TFTP_ROOT + "nodes/"
 TFTP_STATIC_DIR = Path(TFTP_ROOT + "tftp-static")
 TFTP_STATIC_DIR_TS = 1741598952
-NODE_PROBING_PATH = Path(NODES_PATH) / 'probing'
-NODE_PROBING_TFTP_PATH = NODE_PROBING_PATH / 'tftp'
+NODE_PROBING_PATH = Path(NODES_PATH) / "probing"
+NODE_PROBING_TFTP_PATH = NODE_PROBING_PATH / "tftp"
 TFTP_STATUS_PATH = Path(NODES_PATH) / "status.pickle"
 TFTP_STATUS = None
 
@@ -54,12 +58,16 @@ def revert_to_empty_status():
                 # (compatibility with older walt code)
                 # the content of 'persist_dir' will then be moved to
                 # 'persist_dirs/<owner>' as a later step.
-                persist_entry = (node_entry / "persist")
+                persist_entry = node_entry / "persist"
                 if is_real_dir(persist_entry):
                     persist_entry.rename("persist_dir")
                 for node_dir_entry in list(node_entry.iterdir()):
                     if node_dir_entry.name not in (
-                            "persist_dirs", "persist_dir", "networks", "disks"):
+                        "persist_dirs",
+                        "persist_dir",
+                        "networks",
+                        "disks",
+                    ):
                         if is_real_dir(node_dir_entry):
                             shutil.rmtree(node_dir_entry)
                         else:
@@ -73,6 +81,7 @@ def revert_to_empty_status():
 def prepare():
     global TFTP_STATUS
     import walt.server.processes.main.network
+
     this_dir = files(walt.server.processes.main.network)
     if not Path(PXE_PATH).exists():
         failsafe_makedirs(PXE_PATH)
@@ -98,9 +107,7 @@ def prepare():
         NODE_PROBING_PATH.mkdir(parents=True)
     if not NODE_PROBING_TFTP_PATH.is_symlink():
         failsafe_symlink(
-            str(TFTP_STATIC_DIR),
-            str(NODE_PROBING_TFTP_PATH),
-            force_relative=True
+            str(TFTP_STATIC_DIR), str(NODE_PROBING_TFTP_PATH), force_relative=True
         )
     # tftp-standby is an obsolete (<8.3) directory
     tftp_standby = Path(TFTP_ROOT + "tftp-standby")
@@ -148,8 +155,9 @@ def prepare():
 
 
 RPI_MAC_CONDITION = " or ".join(
-        f"""d.mac like '{vendor_id}:%'""" \
-        for vendor_id in get_rpi_foundation_mac_vendor_ids())
+    f"""d.mac like '{vendor_id}:%'"""
+    for vendor_id in get_rpi_foundation_mac_vendor_ids()
+)
 
 
 WALT_SUBNET = str(get_walt_subnet())
@@ -173,7 +181,7 @@ WHERE d.ip IS NOT NULL
 def update(db, images, cleanup=False):
     global TFTP_STATUS
     db_devices = db.execute(QUERY_DEVICES_WITH_IP)
-    db_nodes = db_devices[db_devices.type == 'node']
+    db_nodes = db_devices[db_devices.type == "node"]
     # -- declare dirs
     mac_dirs = "DIR " + db_nodes.mac
     # -- declare ip, name and mac-dash symlinks
@@ -186,21 +194,31 @@ def update(db, images, cleanup=False):
     # (see comment about case cleanup=True above)
     metadata = images.registry.get_multiple_metadata(db_nodes.image)
     image_ids = np.fromiter((m["image_id"] for m in metadata), dtype=object)
-    fs_symlinks = (
-        "SYMLINK ../../images/" + image_ids + "/fs " + db_nodes.mac + "/fs")
+    fs_symlinks = "SYMLINK ../../images/" + image_ids + "/fs " + db_nodes.mac + "/fs"
     if cleanup:
-        tftp_symlinks = ("SYMLINK ../../tftp-static " + db_nodes.mac + "/tftp")
+        tftp_symlinks = "SYMLINK ../../tftp-static " + db_nodes.mac + "/tftp"
     else:
         tftp_symlinks = (
-            "SYMLINK ../../images/" + image_ids + "/fs/boot/" + db_nodes.model +
-            " " + db_nodes.mac + "/tftp")
+            "SYMLINK ../../images/"
+            + image_ids
+            + "/fs/boot/"
+            + db_nodes.model
+            + " "
+            + db_nodes.mac
+            + "/tftp"
+        )
     # -- declare persist symlinks
     mask_persist = db_nodes.persist.astype(bool)
     persist_ok_symlinks = (
-        "SYMLINK persist_dirs/" + db_nodes.owner[mask_persist] + " " +
-        db_nodes.mac[mask_persist] + "/persist")
+        "SYMLINK persist_dirs/"
+        + db_nodes.owner[mask_persist]
+        + " "
+        + db_nodes.mac[mask_persist]
+        + "/persist"
+    )
     persist_ko_symlinks = (
-        "SYMLINK forbidden_dir " + db_nodes.mac[~mask_persist] + "/persist")
+        "SYMLINK forbidden_dir " + db_nodes.mac[~mask_persist] + "/persist"
+    )
     # -- declare symlinks to node-probing dir for unallocated ips
     #    and Raspberry Pi devices of type "unknown"
     # Raspberry pi 3b+ boards do not implement the whole DHCP handshake and
@@ -226,19 +244,36 @@ def update(db, images, cleanup=False):
     # registered as a device of "unknown" type. Later, if trying to boot the
     # same board without the SD card, we need to have the TFTP links to the
     # "probing" dir ready too, to allow WALT network bootup.
-    unknown_rpis_mask = (db_devices.type == 'unknown')
+    unknown_rpis_mask = db_devices.type == "unknown"
     unknown_rpis_mask &= db_devices.is_rpi.astype(bool)
     unknown_rpis = db_devices[unknown_rpis_mask]
-    unknown_rpis_symlinks = np.concatenate((
+    unknown_rpis_symlinks = np.concatenate(
+        (
             "SYMLINK probing " + unknown_rpis.ip,
             "SYMLINK probing " + unknown_rpis.mac,
             "SYMLINK probing " + unknown_rpis.mac_dash,
-            "SYMLINK probing " + unknown_rpis.name), dtype=object)
+            "SYMLINK probing " + unknown_rpis.name,
+        ),
+        dtype=object,
+    )
     # -- compile the new status
-    status = set(np.concatenate((
-        mac_dirs, mac_dash_symlinks, ip_symlinks, name_symlinks,
-        fs_symlinks, tftp_symlinks, persist_ok_symlinks, persist_ko_symlinks,
-        free_ip_symlinks, unknown_rpis_symlinks), dtype=object))
+    status = set(
+        np.concatenate(
+            (
+                mac_dirs,
+                mac_dash_symlinks,
+                ip_symlinks,
+                name_symlinks,
+                fs_symlinks,
+                tftp_symlinks,
+                persist_ok_symlinks,
+                persist_ko_symlinks,
+                free_ip_symlinks,
+                unknown_rpis_symlinks,
+            ),
+            dtype=object,
+        )
+    )
     if status == TFTP_STATUS:
         # nothing changed
         return
@@ -253,14 +288,14 @@ def update(db, images, cleanup=False):
                     # the status file contains invalid information
                     valid_status = False
                     break
-                #print(f"tftp: remove {args[2]}")
+                # print(f"tftp: remove {args[2]}")
                 Path(NODES_PATH + args[2]).unlink()
             elif args[0] == "DIR":
                 if not is_real_dir(Path(NODES_PATH + args[1])):
                     # the status file contains invalid information
                     valid_status = False
                     break
-                #print(f"tftp: remove {args[1]}")
+                # print(f"tftp: remove {args[1]}")
                 shutil.rmtree(NODES_PATH + args[1])
         if not valid_status:
             revert_to_empty_status()
@@ -273,7 +308,7 @@ def update(db, images, cleanup=False):
         for directive in sorted(status - TFTP_STATUS):
             args = directive.split()
             if args[0] == "DIR":
-                #print(f"tftp: create {args[1]}")
+                # print(f"tftp: create {args[1]}")
                 mac_dir_path = Path(NODES_PATH + args[1])
                 mac_dir_path.mkdir(exist_ok=True)
             elif args[0] == "SYMLINK":
@@ -281,7 +316,7 @@ def update(db, images, cleanup=False):
                     # the status file contains invalid information
                     valid_status = False
                     break
-                #print(f"tftp: create {args[2]}")
+                # print(f"tftp: create {args[2]}")
                 symlink_path = Path(NODES_PATH + args[2])
                 mac_dir_path = symlink_path.parent
                 target_path = mac_dir_path / args[1]

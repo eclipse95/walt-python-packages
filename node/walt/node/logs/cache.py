@@ -11,7 +11,7 @@ LOGCONN_CACHE_MIN_DELAY = 15
 LOGCONN_CACHE_CLEANUP = 0
 
 
-class LogsConnCache(object):
+class LogsConnCache:
     def __init__(self):
         self.conns = {}
 

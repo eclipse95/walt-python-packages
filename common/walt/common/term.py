@@ -16,7 +16,7 @@ def _get_win_size():
     return buf
 
 
-class TTYSettings(object):
+class TTYSettings:
     def __init__(self):
         self.tty_fd = sys.stdout.fileno()
         # save
@@ -52,8 +52,9 @@ class TTYSettings(object):
         return self.win_size
 
 
-def  _run_get_stdout(cmd):
-    from subprocess import run, PIPE
+def _run_get_stdout(cmd):
+    from subprocess import PIPE, run
+
     return run(cmd, stdout=PIPE, stderr=PIPE, shell=True).stdout
 
 
@@ -61,17 +62,16 @@ def  _run_get_stdout(cmd):
 def alternate_screen_buffer(mouse_wheel_as_arrow_keys=False):
     escape_enter = _run_get_stdout("tput smcup")
     escape_exit = _run_get_stdout("tput rmcup")
-    if escape_enter == b'' or escape_exit == b'':
+    if escape_enter == b"" or escape_exit == b"":
         # the terminal does not support this, just clear
         escape_enter = ESC_CLEAR
         escape_exit = ESC_CLEAR
-    else:
-        # the terminal probably also supports alternate scroll mode
-        # (i.e., scroll using the mouse wheel; unfortunately there is
-        # no tput property to check this).
-        if mouse_wheel_as_arrow_keys:
-            escape_enter = escape_enter + b"\x1b[?1007h"
-            escape_exit = b"\x1b[?1007l" + escape_exit
+    # the terminal probably also supports alternate scroll mode
+    # (i.e., scroll using the mouse wheel; unfortunately there is
+    # no tput property to check this).
+    elif mouse_wheel_as_arrow_keys:
+        escape_enter = escape_enter + b"\x1b[?1007h"
+        escape_exit = b"\x1b[?1007l" + escape_exit
     # ok let's go
     sys.stdout.buffer.write(escape_enter)
     sys.stdout.flush()
@@ -138,11 +138,11 @@ def choose(prompt, options, allow_ctrl_c=False):
             req = sys.stdin.read(1)
             if req == "\r":  # <enter>: validate
                 break
-            elif req in ("A", "D"):  # <up> or <left>: previous
+            if req in ("A", "D"):  # <up> or <left>: previous
                 selected = max(selected - 1, 0)
             elif req in ("B", "C"):  # <down> or <right>: next
                 selected = min(selected + 1, len(options_desc) - 1)
-            elif allow_ctrl_c and req == '\x03':
+            elif allow_ctrl_c and req == "\x03":
                 selected = None
                 break
     finally:
@@ -157,13 +157,13 @@ def choose(prompt, options, allow_ctrl_c=False):
         return None
     if options_values is None:
         return options_desc[selected]
-    else:
-        return options_values[selected]
+    return options_values[selected]
 
 
 @contextmanager
 def on_sigwinch_call(handler):
-    from signal import signal, SIGWINCH
+    from signal import SIGWINCH, signal
+
     prev_on_sigwinch = signal(SIGWINCH, handler)
     yield
     signal(SIGWINCH, prev_on_sigwinch)
@@ -174,7 +174,7 @@ class SIGWINCHException(Exception):
 
 
 def _on_sigwinch_raise_exception(sig, frame):
-    raise SIGWINCHException()
+    raise SIGWINCHException
 
 
 @contextmanager
@@ -196,14 +196,14 @@ def on_sigwinch_interrupt_pause():
 def wait_for_large_enough_terminal(min_width):
     width = _get_win_size()[1]
     if width >= min_width:
-        return False    # no resizing needed
+        return False  # no resizing needed
     clear_screen()
     print()
-    print("The terminal window is too small for displaying next screen.",
-          end="\r\n")
+    print("The terminal window is too small for displaying next screen.", end="\r\n")
     print("Please resize it now.", end="\r\n")
-    from signal import pause
     import time
+    from signal import pause
+
     with on_sigwinch_interrupt_pause():
         while True:
             width = _get_win_size()[1]

@@ -7,6 +7,7 @@ import textwrap
 from pathlib import Path
 
 import yaml
+
 from walt.server.config import cleanup_defaults
 from walt.server.setup.netconf import (
     edit_netconf_interactive,
@@ -161,9 +162,8 @@ def dump_commented_conf(conf, comment_info):
             section_conf = conf[k]
             if len(section_conf) > 0:
                 reordered_conf[k] = section_conf
-    conf_dump = yaml.dump(reordered_conf,
-                          indent=YAML_INDENT,
-                          sort_keys=False)
+    conf_dump = yaml.dump(reordered_conf, indent=YAML_INDENT, sort_keys=False)
+
     # add comments
     def add_desc_comment(match):
         indent, pattern = match.groups()
@@ -226,7 +226,7 @@ def update_server_conf(conf):
     curr_conf_text = None
     if WALT_SERVER_CONF["PATH"].exists():
         curr_conf_text = WALT_SERVER_CONF["PATH"].read_text()
-    same_conf = (conf_text == curr_conf_text)
+    same_conf = conf_text == curr_conf_text
     if not same_conf:
         print(f'Saving configuration at {WALT_SERVER_CONF["PATH"]}... ', end="")
         WALT_SERVER_CONF["PATH"].parent.mkdir(parents=True, exist_ok=True)

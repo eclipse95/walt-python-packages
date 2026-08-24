@@ -3,16 +3,21 @@ import json
 import os
 import shutil
 import sys
-
 from pathlib import Path
 from subprocess import CalledProcessError
 
 from walt.common.tools import failsafe_makedirs
-from walt.server.exttools import findmnt, umount, mount, buildah, podman
-from walt.server.mount.tools import get_mount_path, mount_exists, serialized_mounts
-from walt.server.mount.tools import img_print as img_print_generic, long_image_id
-from walt.server.mount.tools import get_mount_container_name, get_mount_image_name
+from walt.server.exttools import buildah, findmnt, mount, podman, umount
 from walt.server.mount.setup import setup
+from walt.server.mount.tools import (
+    get_mount_container_name,
+    get_mount_image_name,
+    get_mount_path,
+    long_image_id,
+    mount_exists,
+    serialized_mounts,
+)
+from walt.server.mount.tools import img_print as img_print_generic
 
 IMAGE_LAYERS_DIR = "/var/lib/containers/storage/overlay"
 

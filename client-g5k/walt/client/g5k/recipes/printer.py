@@ -7,8 +7,7 @@ CHECK_MARK = "\u2714"
 def check_mark_or_empty(bool_value):
     if bool_value:
         return CHECK_MARK
-    else:
-        return ""
+    return ""
 
 
 def printed_walltime(recipe_info):

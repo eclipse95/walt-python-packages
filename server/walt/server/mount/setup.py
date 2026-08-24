@@ -3,9 +3,9 @@ import os.path
 import shutil
 import sys
 from collections import OrderedDict
+from importlib.resources import files
 from pathlib import Path
 
-from importlib.resources import files
 from walt.common.constants import (
     WALT_SERVER_DAEMON_PORT,
     WALT_SERVER_TCP_PORT,
@@ -13,11 +13,11 @@ from walt.common.constants import (
 from walt.common.tools import do, failsafe_symlink, get_mac_address
 from walt.server import spec
 from walt.server.const import (
-    WALT_INTF,
-    WALT_NODE_NET_SERVICE_PORT,
+    NODE_DROPBEAR_ECDSA_HOST_KEY_PATH,
     NODE_SSH_ECDSA_HOST_KEY_PATH,
     NODE_SSH_ECDSA_HOST_KEY_PUB_PATH,
-    NODE_DROPBEAR_ECDSA_HOST_KEY_PATH,
+    WALT_INTF,
+    WALT_NODE_NET_SERVICE_PORT,
 )
 from walt.server.tools import get_server_ip, update_template
 
@@ -112,6 +112,7 @@ ff02::2     ip6-allrouters
 
 def script_path(script_name):
     import walt.server.mount
+
     return str(files(walt.server.mount) / script_name)
 
 
@@ -164,7 +165,7 @@ def fix_if_absolute_symlink(image_root, path, img_print):
     if os.path.islink(path):
         target = os.readlink(path)
         if target.startswith("/"):
-            img_print(("fixing " + path + " target (" + target + ")"))
+            img_print("fixing " + path + " target (" + target + ")")
             target = image_root + target
             failsafe_symlink(target, path, force_relative=True)
         # recursively fix the target if it is a symlink itself
@@ -202,9 +203,10 @@ def setup(image_id, mount_path, image_size_kib, img_print):
     try:
         _setup(image_id, mount_path, image_size_kib, img_print)
     except Exception as e:
-        img_print(f"WARNING: Caught exception '{str(e)}'", file=sys.stderr)
-        img_print("WARNING: Nodes may have problems booting this image!",
-              file=sys.stderr)
+        img_print(f"WARNING: Caught exception '{e!s}'", file=sys.stderr)
+        img_print(
+            "WARNING: Nodes may have problems booting this image!", file=sys.stderr
+        )
 
 
 def _setup(image_id, mount_path, image_size_kib, img_print):
@@ -238,7 +240,7 @@ def _setup(image_id, mount_path, image_size_kib, img_print):
         p = Path(mount_path + path)
         if p.exists():
             old_content = p.read_bytes()
-            new_content = old_content + b'\n' + content
+            new_content = old_content + b"\n" + content
             p.write_bytes(new_content)
         else:
             p.parent.mkdir(parents=True, exist_ok=True)
@@ -262,11 +264,11 @@ def _setup(image_id, mount_path, image_size_kib, img_print):
     # copy walt scripts in <image>/bin/ or <image>/bin/_walt_internal_/,
     # update template parameters
     image_bindir = mount_path + "/bin/"
-    image_widir = image_bindir + '_walt_internal_/'
+    image_widir = image_bindir + "_walt_internal_/"
     Path(image_widir).mkdir(exist_ok=True)
-    env = dict(walt_image_id=image_id,
-               walt_image_size_kib=image_size_kib,
-               **TEMPLATE_ENV)
+    env = dict(
+        walt_image_id=image_id, walt_image_size_kib=image_size_kib, **TEMPLATE_ENV
+    )
     for script_name, script_info in NODE_SCRIPTS.items():
         template, internal = script_info
         if internal:

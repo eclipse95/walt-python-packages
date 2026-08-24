@@ -67,7 +67,7 @@ class DiskCache:
                 self._cache = {}
                 variants_cache = pickle.loads(OBSOLETE_SNMP_CACHE_FILE.read_bytes())
                 for k, v in variants_cache.items():
-                    new_k = ('snmp-variant',) + k
+                    new_k = ("snmp-variant",) + k
                     if new_k not in self._cache:
                         self._cache[new_k] = v
                 OBSOLETE_SNMP_CACHE_FILE.unlink()

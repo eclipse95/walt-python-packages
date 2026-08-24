@@ -2,7 +2,7 @@ from walt.common.tools import SimpleContainer
 from walt.server.processes.main.task import APISessionTask
 
 
-class APISession(object):
+class APISession:
     SESSIONS = {}
     TARGET_APIS = {}
     SERVER_CONTEXT = None

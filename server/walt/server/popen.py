@@ -8,15 +8,14 @@ from time import time
 TERMINATE_EVENTS = (
     (3.0, signal.SIGTERM),
     (5.0, signal.SIGKILL),
-    (2.0, None)  # detect failure to kill
+    (2.0, None),  # detect failure to kill
 )
 
 
 class BetterPopen:
     _instances = {}
-    def __init__(
-        self, ev_loop, cmd, kill_function, shell=True
-    ):
+
+    def __init__(self, ev_loop, cmd, kill_function, shell=True):
         self.ev_loop = ev_loop
         self.kill_function = kill_function
         self.cmd = cmd
@@ -120,9 +119,7 @@ class BetterPopen:
         delay, sig = terminate_events[0]
         next_ts = time() + delay
         self.ev_loop.plan_event(
-            ts=next_ts,
-            callback=self.terminate,
-            terminate_events=terminate_events
+            ts=next_ts, callback=self.terminate, terminate_events=terminate_events
         )
 
     def terminate(self, terminate_events):
@@ -134,10 +131,9 @@ class BetterPopen:
                     self.send_signal(sig)
                 if len(next_evts) == 0:
                     raise Exception("Could not terminate popen child!")
-                else:
-                    # recall self.terminate() with next events after a delay
-                    self.plan_terminate(next_evts)
-                    return
+                # recall self.terminate() with next events after a delay
+                self.plan_terminate(next_evts)
+                return
             except Exception as e:
                 print("popen.terminate() -- ignored exception:", e)
 

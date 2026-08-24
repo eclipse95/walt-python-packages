@@ -5,12 +5,7 @@ from walt.server.tools import convert_query_param_value, filter_items_with_query
 
 IMAGE_FIELDS = ("fullname", "user", "id", "in_use", "created", "compatibility:tuple")
 
-PARAM_TYPES = {
-    "fullname": str,
-    "user": str,
-    "id": str,
-    "in_use": bool
-}
+PARAM_TYPES = {"fullname": str, "user": str, "id": str, "in_use": bool}
 
 
 def web_api_list_images(db, images_store, webapi_version, query_params):
@@ -32,8 +27,4 @@ def web_api_list_images(db, images_store, webapi_version, query_params):
     fields = images.dtype.names
     fields = tuple(re.sub(r"([^:]*):.*", r"\1", f) for f in fields)
     images.dtype.names = fields
-    return {
-        "code": 200,    # ok
-        "num_images": len(images),
-        "images": images
-    }
+    return {"code": 200, "num_images": len(images), "images": images}  # ok
