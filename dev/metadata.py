@@ -2,7 +2,7 @@ PACKAGE_GENERIC_INFO = dict(
     # metadata for upload to PyPI
     author="WalT developers",
     author_email="walt-contact@univ-grenoble-alpes.fr",
-    license="3-Clause BSD",
+    license="BSD-3-Clause",
     keywords="WalT testbed",
     url="https://walt-project.liglab.fr",
 )
@@ -13,7 +13,7 @@ PACKAGE_SPECIFIC_INFO = {
         requires=[
             "commonmark>=0.7.5",
             "pygments>=2.2.0",
-            "setuptools>=70.0.0",   # includes pkg_resources, for finding md files
+            "setuptools>=70.0.0",  # includes pkg_resources, for finding md files
             "walt-common==%(walt_version)s",
         ],
         version_str="%(walt_version)s",
@@ -125,12 +125,14 @@ PACKAGE_SPECIFIC_INFO = {
                     "walt-vpn-admin = walt.server.vpn.admin:run",
                 ]
             },
-            scripts=["sh/walt-image-shell-helper",
-                     "sh/walt-image-build-helper",
-                     "sh/walt-image-fs-helper",
-                     "sh/walt-server-cleanup",
-                     "sh/walt-device-ssh",
-                     "sh/walt-server-vpn-test-ssh-entrypoint"],
+            scripts=[
+                "sh/walt-image-shell-helper",
+                "sh/walt-image-build-helper",
+                "sh/walt-image-fs-helper",
+                "sh/walt-server-cleanup",
+                "sh/walt-device-ssh",
+                "sh/walt-server-vpn-test-ssh-entrypoint",
+            ],
             setup_requires=["cffi>=1.16.0"],
             cffi_modules=["walt/server/ext/build.py:ffibuilder"],
             include_package_data=True,
