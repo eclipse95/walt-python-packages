@@ -120,6 +120,21 @@ OS_ACTIONS = {
             "update_completion",
             "msg_ready",
         ),
+        "trixie": (
+            "stop_services",
+            "setup_vpn",
+            "define_server_conf",
+            "fix_conmon",
+            "disable_os_services",
+            "setup_command_symlinks",
+            "setup_walt_services",
+            "fix_other_conf_files",
+            "update_server_conf",
+            "systemd_reload",
+            "start_walt_services",
+            "update_completion",
+            "msg_ready",
+        ),
     },
     "upgrade": {
         "bullseye": (
